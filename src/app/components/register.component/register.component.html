@@ -1,0 +1,13 @@
+<h2>Registro de Cliente</h2>
+<form (ngSubmit)="registrarCliente()">
+  <input [(ngModel)]="cliente.email" name="email" placeholder="Email" required>
+  <input [(ngModel)]="cliente.nombre" name="nombre" placeholder="Nombre" required>
+  <input [(ngModel)]="cliente.apellido" name="apellido" placeholder="Apellido" required>
+  <input [(ngModel)]="cliente.fechaNacimiento" name="fechaNacimiento" type="date" required>
+  <input [(ngModel)]="cliente.tipoSangre" name="tipoSangre" placeholder="Tipo de sangre" required>
+  <input [(ngModel)]="cliente.colorOjos" name="colorOjos" placeholder="Color de ojos" required>
+  <input [(ngModel)]="cliente.vacaciones" name="vacaciones" type="number" placeholder="Días de vacaciones por año" required>
+
+  <button type="submit">Registrarse</button>
+</form>
+
