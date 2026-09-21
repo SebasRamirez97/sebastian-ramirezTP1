@@ -1,8 +1,12 @@
 import { Injectable } from '@angular/core';
 import { supabase } from './supabaseClient';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class AuthService {
+
+  // 🔹 Registro de clientes (Supabase Auth con metadatos)
   async signUp(cliente: {
     email: string;
     password: string;
@@ -24,49 +28,70 @@ export class AuthService {
           tipoSangre: cliente.tipoSangre,
           colorOjos: cliente.colorOjos,
           vacaciones: cliente.vacaciones,
-          // inicializamos en 0 los contadores
-          puntosFidelizacion: 0,
-          creditos: 0,
-          comprasHechas: 0,
-          peliculasVistas: 0
+          rol: 'cliente'
         }
       }
     });
-
     if (error) throw error;
     return data;
   }
 
+  // 🔹 Login de clientes (Supabase Auth)
   async signIn(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password,
+      password
     });
     if (error) throw error;
     return data;
   }
 
+  // 🔹 Login de empleados y administradores (tabla propia)
   async loginPersonal(email: string, password: string) {
     const { data, error } = await supabase
-      .from('usuarios_personal') // tu tabla en la base
+      .from('usuarios_personal')
       .select('*')
       .eq('email', email)
-      .eq('password', password) // ojo: en un sistema real deberías usar hash
+      .eq('password', password) // ⚠️ en producción usar hash
       .single();
 
     if (error) throw error;
-    return data; // devuelve el registro con el campo rol
+    return data; // incluye el campo rol
   }
 
+  // 🔹 Obtener usuario actual (clientes registrados)
   async getUser() {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const { data, error } = await supabase.auth.getUser();
     if (error) throw error;
-    return user;
+    return data.user;
   }
 
+  // 🔹 Cerrar sesión (clientes registrados)
   async signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+
+    // limpiar también cliente anónimo si existía
+    localStorage.removeItem('clienteAnonimo');
+  }
+
+  // 🔹 Login como cliente anónimo
+  loginAnonimo(nombre: string = 'Invitado') {
+    const clienteAnonimo = { nombre, rol: 'anonimo' };
+    localStorage.setItem('clienteAnonimo', JSON.stringify(clienteAnonimo));
+    return clienteAnonimo;
+  }
+
+  // 🔹 Obtener cliente anónimo
+  getAnonimo() {
+    const anonimo = localStorage.getItem('clienteAnonimo');
+    return anonimo ? JSON.parse(anonimo) : null;
+  }
+
+  // 🔹 Salir como cliente anónimo
+  signOutAnonimo() {
+    localStorage.removeItem('clienteAnonimo');
   }
 }
+
   
