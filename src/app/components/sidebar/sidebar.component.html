@@ -1,0 +1,37 @@
+<aside class="sidebar">
+  <h2>Menú</h2>
+  <ul>
+    <!-- Admin -->
+    <ng-container *ngIf="rol === 'admin'">
+      <li><a routerLink="/home">🏠 Inicio</a></li>
+      <li><a routerLink="/peliculas">🎬 Películas</a></li>
+      <li><a routerLink="/registrar-empleado">📝 Registrar Empleado</a></li>
+    </ng-container>
+
+    <!-- Cliente -->
+    <ng-container *ngIf="rol === 'cliente'">
+      <li><a routerLink="/home">🏠 Inicio</a></li>
+      <li><a routerLink="/peliculas">🎬 Películas</a></li>
+    </ng-container>
+
+    <!-- Empleado -->
+    <ng-container *ngIf="rol === 'empleado'">
+      <li><a routerLink="/verificar-entrada">✅ Verificar Entrada</a></li>
+    </ng-container>
+
+    <!-- Anónimo -->
+    <ng-container *ngIf="rol === 'anonimo'">
+      <li><a routerLink="/home">🏠 Inicio</a></li>
+      <li><a routerLink="/peliculas">🎬 Películas</a></li>
+      <li><a routerLink="/admin">👤 Admin</a></li>
+      <li><a routerLink="/empleado">👥 Empleado</a></li>
+      <li><a routerLink="/cliente">🧑 Cliente</a></li>
+    </ng-container>
+  </ul>
+
+  <!-- Footer -->
+  <div class="sidebar-footer">
+    <button *ngIf="rol !== 'anonimo'" (click)="cerrarSesion()">🚪 Cerrar sesión</button>
+    <button *ngIf="rol === 'anonimo'" (click)="salirAnonimo()">🚪 Salir</button>
+  </div>
+</aside>
