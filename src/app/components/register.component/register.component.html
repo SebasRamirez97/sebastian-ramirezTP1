@@ -1,13 +1,47 @@
-<h2>Registro de Cliente</h2>
-<form (ngSubmit)="registrarCliente()">
-  <input [(ngModel)]="cliente.email" name="email" placeholder="Email" required>
-  <input [(ngModel)]="cliente.nombre" name="nombre" placeholder="Nombre" required>
-  <input [(ngModel)]="cliente.apellido" name="apellido" placeholder="Apellido" required>
-  <input [(ngModel)]="cliente.fechaNacimiento" name="fechaNacimiento" type="date" required>
-  <input [(ngModel)]="cliente.tipoSangre" name="tipoSangre" placeholder="Tipo de sangre" required>
-  <input [(ngModel)]="cliente.colorOjos" name="colorOjos" placeholder="Color de ojos" required>
-  <input [(ngModel)]="cliente.vacaciones" name="vacaciones" type="number" placeholder="Días de vacaciones por año" required>
+<div class="register-container">
+  <h2>Registro de Cliente</h2>
 
-  <button type="submit">Registrarse</button>
-</form>
+  <form (ngSubmit)="registrarCliente()">
+    <div class="form-group">
+      <label for="email">Correo:</label>
+      <input id="email" [(ngModel)]="cliente.email" name="email" type="email" required />
+    </div>
 
+    <div class="form-group">
+      <label for="password">Contraseña:</label>
+      <input id="password" [(ngModel)]="cliente.password" name="password" type="password" required />
+    </div>
+
+    <div class="form-group">
+      <label for="nombre">Nombre:</label>
+      <input id="nombre" [(ngModel)]="cliente.nombre" name="nombre" required />
+    </div>
+
+    <div class="form-group">
+      <label for="apellido">Apellido:</label>
+      <input id="apellido" [(ngModel)]="cliente.apellido" name="apellido" required />
+    </div>
+
+    <div class="form-group">
+      <label for="fechaNacimiento">Fecha de nacimiento:</label>
+      <input id="fechaNacimiento" [(ngModel)]="cliente.fechaNacimiento" name="fechaNacimiento" type="date" required />
+    </div>
+
+    <div class="form-group">
+      <label for="tipoSangre">Tipo de sangre:</label>
+      <input id="tipoSangre" [(ngModel)]="cliente.tipoSangre" name="tipoSangre" required />
+    </div>
+
+    <div class="form-group">
+      <label for="colorOjos">Color de ojos:</label>
+      <input id="colorOjos" [(ngModel)]="cliente.colorOjos" name="colorOjos" required />
+    </div>
+
+    <div class="form-group">
+      <label for="vacaciones">Días de vacaciones por año:</label>
+      <input id="vacaciones" [(ngModel)]="cliente.vacaciones" name="vacaciones" type="number" required />
+    </div>
+
+    <button type="submit">Registrarse</button>
+  </form>
+</div>
