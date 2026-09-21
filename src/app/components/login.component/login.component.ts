@@ -1,57 +1,51 @@
 import { Component } from '@angular/core';
-import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
-  standalone: true,
-  imports: [FormsModule],
-  selector: 'app-login.component',
-  styleUrl: './login.component.css',
+  selector: 'app-login',
   templateUrl: './login.component.html',
+  styleUrls: ['./login.component.css']
 })
 export class LoginComponent {
-  email = '';
-  password = '';
-  nombreAnonimo = '';
+  email: string = '';
+  password: string = '';
 
   constructor(private authService: AuthService, private router: Router) {}
 
   async login() {
     try {
-      // 1. Intentar login con Supabase (clientes)
-    const res = await this.authService.signIn(this.email, this.password);
-
-    if (res.user) {
-      // Cliente registrado → va a /inicio
-      this.router.navigate(['/inicio']);
-      return;
-    }
-
-    // 2. Si no es cliente, consultar tabla empleados/admin
-    // Supongamos que tenés un método en AuthService que busca en tu tabla
-    const usuario = await this.authService.loginPersonal(this.email, this.password);
-
-    if (usuario) {
-      if (usuario.rol === 'admin') {
-        this.router.navigate(['/inicioAdmin']);
-      } else if (usuario.rol === 'empleado') {
-        this.router.navigate(['/inicioEmpleado']);
-      } else {
-        alert('Rol no reconocido');
+      // 1. Intentar login de cliente registrado (Supabase Auth)
+      const cliente = await this.authService.signIn(this.email, this.password);
+      if (cliente?.user) {
+        localStorage.removeItem('clienteAnonimo'); // limpiar estado anónimo
+        this.router.navigate(['/home']);
+        return;
       }
-    } else {
-      alert('Credenciales inválidas');
-    }
 
-  } catch (err: any) {
-    console.error('Error en login:', err.message);
-  }
+      // 2. Intentar login de personal (empleado/admin)
+      const personal = await this.authService.loginPersonal(this.email, this.password);
+      if (personal) {
+        localStorage.removeItem('clienteAnonimo'); // limpiar estado anónimo
+        if (personal.rol === 'admin') {
+          this.router.navigate(['/home']); // Home mostrará sección admin
+        } else if (personal.rol === 'empleado') {
+          this.router.navigate(['/home']); // Home mostrará sección empleado
+        }
+        return;
+      }
+
+      // 3. Si no coincide en ningún lado
+      alert('Credenciales inválidas');
+    } catch (err: any) {
+      console.error('Error en login:', err.message);
+      alert('Error al iniciar sesión');
+    }
   }
 
   loginAnonimo() {
-    const clienteAnonimo = { nombre: this.nombreAnonimo, tipo: 'anonimo' };
-    localStorage.setItem('clienteAnonimo', JSON.stringify(clienteAnonimo));
-    this.router.navigate(['/inicio']); // redirige a la página de inicio
+    const anonimo = this.authService.loginAnonimo('Invitado');
+    this.router.navigate(['/home']); // Home mostrará sección anónimo
   }
 }
+
