@@ -1,34 +1,24 @@
 import { Injectable } from '@angular/core';
 import { supabase } from './supabaseClient';
+import { ClienteMetadata, EmpleadoMetadata, AdminMetadata, AnonimoMetadata } from '../models/user-metadata';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
 
-  // 🔹 Registro de clientes (Supabase Auth con metadatos)
+  // 🔹 Registro de clientes (Supabase Auth con metadatos tipados)
   async signUp(cliente: {
     email: string;
     password: string;
-    nombre: string;
-    apellido: string;
-    fechaNacimiento: string;
-    tipoSangre: string;
-    colorOjos: string;
-    vacaciones: number;
-  }) {
+  } & Omit<ClienteMetadata, 'rol'>) {
     const { data, error } = await supabase.auth.signUp({
       email: cliente.email,
       password: cliente.password,
       options: {
         data: {
-          nombre: cliente.nombre,
-          apellido: cliente.apellido,
-          fechaNacimiento: cliente.fechaNacimiento,
-          tipoSangre: cliente.tipoSangre,
-          colorOjos: cliente.colorOjos,
-          vacaciones: cliente.vacaciones,
-          rol: 'cliente'
+          ...cliente,
+          rol: 'cliente' // 👈 se fuerza el rol
         }
       }
     });
@@ -46,6 +36,40 @@ export class AuthService {
     return data;
   }
 
+  // 🔹 Registro de empleados (tabla propia)
+  async registrarEmpleado(empleado: {
+    email: string;
+    password: string;
+  } & Omit<EmpleadoMetadata, 'rol'>) {
+    const { data, error } = await supabase
+      .from('usuarios_personal')
+      .insert([{
+        ...empleado,
+        rol: 'empleado',
+        estado: 'activo'
+      }]);
+
+    if (error) throw error;
+    return data;
+  }
+
+  // 🔹 Registro de administradores (tabla propia)
+  async registrarAdmin(admin: {
+    email: string;
+    password: string;
+  } & Omit<AdminMetadata, 'rol'>) {
+    const { data, error } = await supabase
+      .from('usuarios_personal')
+      .insert([{
+        ...admin,
+        rol: 'admin',
+        estado: 'activo'
+      }]);
+
+    if (error) throw error;
+    return data;
+  }
+
   // 🔹 Login de empleados y administradores (tabla propia)
   async loginPersonal(email: string, password: string) {
     const { data, error } = await supabase
@@ -56,34 +80,41 @@ export class AuthService {
       .single();
 
     if (error) throw error;
-    return data; // incluye el campo rol
+    return data as EmpleadoMetadata | AdminMetadata;
   }
 
   // 🔹 Obtener usuario actual (clientes registrados)
   async getUser() {
+  try {
     const { data, error } = await supabase.auth.getUser();
-    if (error) throw error;
+    if (error) {
+      console.warn('No hay sesión activa en Supabase:', error.message);
+      return null; // 👈 devolvemos null en vez de romper
+    }
     return data.user;
+  } catch (err) {
+    console.error('Error inesperado al obtener usuario:', err);
+    return null;
   }
+}
 
   // 🔹 Cerrar sesión (clientes registrados)
   async signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
-
-    // limpiar también cliente anónimo si existía
     localStorage.removeItem('clienteAnonimo');
+    return true;
   }
 
   // 🔹 Login como cliente anónimo
   loginAnonimo(nombre: string = 'Invitado') {
-    const clienteAnonimo = { nombre, rol: 'anonimo' };
+    const clienteAnonimo: AnonimoMetadata = { nombre, rol: 'anonimo' };
     localStorage.setItem('clienteAnonimo', JSON.stringify(clienteAnonimo));
     return clienteAnonimo;
   }
 
   // 🔹 Obtener cliente anónimo
-  getAnonimo() {
+  getAnonimo(): AnonimoMetadata | null {
     const anonimo = localStorage.getItem('clienteAnonimo');
     return anonimo ? JSON.parse(anonimo) : null;
   }
@@ -93,5 +124,3 @@ export class AuthService {
     localStorage.removeItem('clienteAnonimo');
   }
 }
-
-  

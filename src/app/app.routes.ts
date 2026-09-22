@@ -9,7 +9,7 @@ import { ClienteGuard } from './guards/cliente.guard';
 
 // Ejemplo de otros componentes
 import { PeliculasComponent } from './components/peliculas/peliculas.component';
-import { RegistrarEmpleadoComponent } from './components/registrar-empleado/registrar-empleado.component';
+import { RegistrarEmpleadoComponent } from './components/registrar-empleado/registrar-empleado.componet';
 import { VerificarEntradaComponent } from './components/verificar-entrada/verificar-entrada.component';
 
 export const routes: Routes = [
