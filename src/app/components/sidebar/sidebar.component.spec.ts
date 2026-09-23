@@ -1,21 +1,30 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { SidebarComponent } from './sidebar.component';
+import { Component, Input } from '@angular/core';
+import { AuthService } from '../../services/auth.service';
+import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
 
-describe('Sidebar', () => {
-  let component: SidebarComponent;
-  let fixture: ComponentFixture<SidebarComponent>;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [SidebarComponent],
-    }).compileComponents();
+@Component({
+  selector: 'app-sidebar',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './sidebar.component.html',
+  styleUrls: ['./sidebar.component.css']
+})
+export class SidebarComponent {
+  @Input() rol: string = ''; // rol recibido desde Home o App
 
-    fixture = TestBed.createComponent(SidebarComponent);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
-  });
+  constructor(private authService: AuthService, private router: Router) {}
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-});
+  cerrarSesion() {
+    this.authService.signOut();
+    localStorage.removeItem('rol')
+    this.router.navigate(['/login']);
+  }
+
+  salirAnonimo() {
+    this.authService.signOutAnonimo();
+    localStorage.removeItem('rol');
+    this.router.navigate(['/login']);
+  }
+}

@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet } from '@angular/router'; // 👈 importa router-outlet
+import { RouterOutlet,RouterModule } from '@angular/router'; // 👈 importa router-outlet
 import { AuthService } from './services/auth.service';
 import { ClienteMetadata, EmpleadoMetadata, AdminMetadata, AnonimoMetadata } from './models/user-metadata';
 import { SidebarComponent } from './components/sidebar/sidebar.component'; // 👈 importa tu sidebar
@@ -9,7 +9,7 @@ import { Router } from '@angular/router';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, SidebarComponent],
+  imports: [CommonModule, RouterOutlet,RouterModule, SidebarComponent],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
@@ -27,6 +27,12 @@ export class App implements OnInit {
       this.rol = metadata.rol ?? '';
       return;
     }
+    const rolGuardado = localStorage.getItem('rol');
+    if (rolGuardado) {
+      this.rol = rolGuardado;
+    return;
+  }
+
     // 2. Intentar obtener cliente anónimo (localStorage)
     const anonimo = this.authService.getAnonimo();
     if (anonimo) {
@@ -38,9 +44,14 @@ export class App implements OnInit {
     this.rol = '';
   }
 
+  mostrarSidebar(): boolean {
+    const rutasOcultas = ['/login', '/register'];
+    return !rutasOcultas.includes(this.router.url);
+  }
+
   async cerrarSesion() {
     await this.authService.signOut();
-    this.rol = ''; // resetear estado
+    localStorage.removeItem('rol'); 
     this.router.navigate(['/login']);
   }
 }

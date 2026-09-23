@@ -17,6 +17,11 @@
 
   <hr />
 
-  <button class="anonimo-btn" (click)="loginAnonimo()">Ingresar como Anónimo</button>
-</div>
+  <!-- Cliente anónimo -->
+  <div class="anonimo-container">
+    <input [(ngModel)]="nombreAnonimo" name="nombreAnonimo" placeholder="Tu nombre" required />
+    <button class="anonimo-btn" (click)="loginAnonimo()">Ingresar como Anónimo</button>
+  </div>
 
+  <button type="button" (click)="irARegistro()" class="registro-btn">Registrarse</button>
+</div>

@@ -1,6 +1,6 @@
 <div class="app-container">
   <!-- Sidebar visible solo si hay rol y no estás en login -->
-  <app-sidebar *ngIf="rol && router.url !== '/login'" [rol]="rol"></app-sidebar>
+   <app-sidebar *ngIf="mostrarSidebar()" [rol]="rol"></app-sidebar>
 
   <!-- Contenido principal -->
   <main class="main-content">

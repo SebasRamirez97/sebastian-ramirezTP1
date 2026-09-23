@@ -1,26 +1,28 @@
 export interface ClienteMetadata {
   rol: 'cliente';
+  // 👇 atributos de negocio
   nombre: string;
   apellido: string;
   fechaNacimiento: string;
   tipoSangre: string;
   colorOjos: string;
   vacaciones: number;
-  // email y password NO van aquí, los maneja Supabase Auth
 }
 
 export interface EmpleadoMetadata {
   rol: 'empleado';
+  // 👇 atributos de negocio
   nombre: string;
   apellido: string;
-  email: string;
-  // password NO se tipa aquí, se maneja en la query
+  estado?: string; // opcional, porque puede ser 'activo' por defecto
 }
 
 export interface AdminMetadata {
   rol: 'admin';
-  email: string;
-  // password igual que empleado, solo en la query
+  // 👇 atributos de negocio
+  nombre: string;
+  apellido: string;
+  // a futuro podés agregar permisos, área, etc.
 }
 
 export interface AnonimoMetadata {

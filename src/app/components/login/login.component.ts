@@ -3,7 +3,6 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { FormsModule } from '@angular/forms';
 
-
 @Component({
   selector: 'app-login',
   imports: [FormsModule],
@@ -14,32 +13,35 @@ import { FormsModule } from '@angular/forms';
 export class LoginComponent {
   email: string = '';
   password: string = '';
+  nombreAnonimo: string = '';
 
   constructor(private authService: AuthService, private router: Router) {}
 
   async login() {
     try {
-      // 1. Intentar login de cliente registrado (Supabase Auth)
-      const cliente = await this.authService.signIn(this.email, this.password);
-      if (cliente?.user) {
-        localStorage.removeItem('clienteAnonimo'); // limpiar estado anónimo
-        this.router.navigate(['/home']);
-        return;
-      }
+      // 🔹 Login único con Supabase Auth
+      const result = await this.authService.signIn(this.email, this.password);
 
-      // 2. Intentar login de personal (empleado/admin)
-      const personal = await this.authService.loginPersonal(this.email, this.password);
-      if (personal) {
+      if (result?.user) {
         localStorage.removeItem('clienteAnonimo'); // limpiar estado anónimo
-        if (personal.rol === 'admin') {
+
+        // 🔹 Leer rol desde metadata
+        const rol = result.user.user_metadata?.['rol'];
+        if (rol) {
+           localStorage.setItem('rol', rol);
+        }
+        if (rol === 'admin') {
           this.router.navigate(['/home']); // Home mostrará sección admin
-        } else if (personal.rol === 'empleado') {
+        } else if (rol === 'empleado') {
           this.router.navigate(['/home']); // Home mostrará sección empleado
+        } else if (rol === 'cliente') {
+          this.router.navigate(['/home']); // Home mostrará sección cliente
+        } else {
+          alert('Rol no reconocido');
         }
         return;
       }
 
-      // 3. Si no coincide en ningún lado
       alert('Credenciales inválidas');
     } catch (err: any) {
       console.error('Error en login:', err.message);
@@ -48,8 +50,16 @@ export class LoginComponent {
   }
 
   loginAnonimo() {
-    const anonimo = this.authService.loginAnonimo('Invitado');
+    const cliente = this.authService.loginAnonimo(this.nombreAnonimo);
+    if (!cliente) {
+      alert('Debes ingresar un nombre para continuar como invitado.');
+      return;
+    }
+    localStorage.setItem('rol', cliente.rol);
     this.router.navigate(['/home']); // Home mostrará sección anónimo
   }
-}
 
+  irARegistro() {
+    this.router.navigate(['/register']);
+  }
+}

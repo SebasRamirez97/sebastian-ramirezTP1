@@ -26,13 +26,30 @@ export class RegisterComponent {
 
   async registrarCliente() {
     try {
-      const res = await this.authService.signUp(this.cliente);
+      const res = await this.authService.signUpCliente(this.cliente);
       console.log('Cliente registrado:', res);
       this.router.navigate(['/login']);
     } catch (err: any) {
       console.error('Error en registro:', err.message);
       alert('Error al registrar cliente');
     }
+  }
+
+  volverAlLogin() {
+  // Reinicia todos los campos del cliente
+  this.cliente = {
+    email: '',
+    password: '',
+    nombre: '',
+    apellido: '',
+    fechaNacimiento: '',
+    tipoSangre: '',
+    colorOjos: '',
+    vacaciones: 0
+  };
+
+  // Navega al login
+  this.router.navigate(['/login']);
   }
 }
 

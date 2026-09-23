@@ -12,6 +12,7 @@
     <ng-container *ngIf="rol === 'cliente'">
       <li><a routerLink="/home">🏠 Inicio</a></li>
       <li><a routerLink="/peliculas">🎬 Películas</a></li>
+      
     </ng-container>
 
     <!-- Empleado -->
@@ -22,10 +23,6 @@
     <!-- Anónimo -->
     <ng-container *ngIf="rol === 'anonimo'">
       <li><a routerLink="/home">🏠 Inicio</a></li>
-      <li><a routerLink="/peliculas">🎬 Películas</a></li>
-      <li><a routerLink="/admin">👤 Admin</a></li>
-      <li><a routerLink="/empleado">👥 Empleado</a></li>
-      <li><a routerLink="/cliente">🧑 Cliente</a></li>
     </ng-container>
   </ul>
 
