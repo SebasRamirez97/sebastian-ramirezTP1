@@ -1,10 +1,9 @@
-<div class="app-container">
-  <!-- Sidebar visible solo si hay rol y no estás en login -->
-   <app-sidebar *ngIf="mostrarSidebar()" [rol]="rol"></app-sidebar>
+<div class="layout-container">
+  @if (mostrarSidebar()) {
+    <app-sidebar></app-sidebar>
+  }
 
-  <!-- Contenido principal -->
   <main class="main-content">
     <router-outlet></router-outlet>
   </main>
 </div>
-

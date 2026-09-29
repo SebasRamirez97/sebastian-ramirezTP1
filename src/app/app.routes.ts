@@ -1,37 +1,42 @@
 import { Routes } from '@angular/router';
+
 import { LoginComponent } from './components/login/login.component';
 import { RegisterComponent } from './components/register/register.component';
 import { HomeComponent } from './components/home/home.component';
-import { AuthGuard } from './guards/auth.guard';
-import { AdminGuard } from './guards/admin.guard';
-import { EmpleadoGuard } from './guards/empleado.guard';
-import { ClienteGuard } from './guards/cliente.guard';
-
-// Ejemplo de otros componentes
-import { PeliculasComponent } from './components/peliculas/peliculas.component';
+import { CarteleraComponent } from './components/cartelera/cartelera';
+import { CrearPeliculaComponent } from './components/crear-pelicula/crear-pelicula';
+import { DetallePeliculaComponent } from './components/detalle-pelicula/detalle-pelicula';
 import { RegistrarEmpleadoComponent } from './components/registrar-empleado/registrar-empleado.componet';
 import { VerificarEntradaComponent } from './components/verificar-entrada/verificar-entrada.component';
 
+// 🔹 Importación de Funciones Guard
+import { authGuard } from './guards/auth.guard';
+import { adminGuard } from './guards/admin.guard';
+import { empleadoGuard } from './guards/empleado.guard';
+import { clienteGuard } from './guards/cliente.guard';
+import { loginGuard } from './guards/login.guard';
+
 export const routes: Routes = [
-  { path: 'login', component: LoginComponent },
-  { path: 'register', component: RegisterComponent },
+  { path: 'login', component: LoginComponent, canActivate: [loginGuard] },
+  { path: 'register', component: RegisterComponent, canActivate: [loginGuard] },
 
-  // Home accesible para cualquier sesión (cliente, admin, empleado, anónimo)
-  { path: 'home', component: HomeComponent, canActivate: [AuthGuard] },
+  { path: 'home', component: HomeComponent, canActivate: [authGuard] },
 
-  // Películas accesible para cliente, admin y anónimo
-  { path: 'peliculas', component: PeliculasComponent, canActivate: [AuthGuard] },
+  // 🎬 Películas
+  { path: 'cartelera', component: CarteleraComponent, canActivate: [authGuard] },
+  { path: 'armar-cartelera', component: CrearPeliculaComponent, canActivate: [adminGuard] },
+  { path: 'peliculas/:id', component: DetallePeliculaComponent, canActivate: [authGuard] },
 
-  // Registrar empleado solo admin
-  { path: 'registrar-empleado', component: RegistrarEmpleadoComponent, canActivate: [AdminGuard] },
+  // 🛠️ Admin
+  { path: 'registrar-empleado', component: RegistrarEmpleadoComponent, canActivate: [adminGuard] },
 
-  // Verificar entrada solo empleado
-  { path: 'verificar-entrada', component: VerificarEntradaComponent, canActivate: [EmpleadoGuard] },
+  // 🍿 Empleado
+  { path: 'verificar-entrada', component: VerificarEntradaComponent, canActivate: [empleadoGuard] },
 
-  // Ejemplo: ruta exclusiva cliente
-  { path: 'cliente-area', component: HomeComponent, canActivate: [ClienteGuard] },
+  // 👤 Cliente
+  { path: 'cliente-area', component: HomeComponent, canActivate: [clienteGuard] },
 
-  // Redirección por defecto
+  // 🔄 Redirecciones
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: '**', redirectTo: '/login' }
 ];

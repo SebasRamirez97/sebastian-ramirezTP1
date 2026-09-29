@@ -1,48 +1,95 @@
-<div class="register-container">
-  <h2>Registro de Cliente</h2>
+<h2>Registro de Cliente</h2>
+<form [formGroup]="formCliente" (ngSubmit)="registrarCliente()">
+  <!-- Email -->
+  <div>
+    <input formControlName="email" placeholder="Email" type="email">
+    @if (submitted && formCliente.get('email')?.invalid) {
+      <div class="error">
+        Campo incompleto o email inválido
+      </div>
+    }
+  </div>
 
-  <form (ngSubmit)="registrarCliente()">
-    <div class="form-group">
-      <label for="email">Correo:</label>
-      <input id="email" [(ngModel)]="cliente.email" name="email" type="email" required />
-    </div>
+  <!-- Password -->
+  <div>
+    <input formControlName="password" placeholder="Contraseña" type="password">
+    @if (submitted && formCliente.get('password')?.invalid) {
+      <div class="error">
+        Campo incompleto (mínimo 6 caracteres)
+      </div>
+    }
+  </div>
 
-    <div class="form-group">
-      <label for="password">Contraseña:</label>
-      <input id="password" [(ngModel)]="cliente.password" name="password" type="password" required />
-    </div>
+  <!-- Nombre -->
+  <div>
+    <input formControlName="nombre" placeholder="Nombre">
+    @if (submitted && formCliente.get('nombre')?.invalid) {
+      <div class="error">
+        Campo incompleto (mínimo 3 letras)
+      </div>
+    }
+  </div>
 
-    <div class="form-group">
-      <label for="nombre">Nombre:</label>
-      <input id="nombre" [(ngModel)]="cliente.nombre" name="nombre" required />
-    </div>
+  <!-- Apellido -->
+  <div>
+    <input formControlName="apellido" placeholder="Apellido">
+    @if (submitted && formCliente.get('apellido')?.invalid) {
+      <div class="error">
+        Campo incompleto
+      </div>
+    }
+  </div>
 
-    <div class="form-group">
-      <label for="apellido">Apellido:</label>
-      <input id="apellido" [(ngModel)]="cliente.apellido" name="apellido" required />
-    </div>
+  <!-- Fecha de nacimiento -->
+  <div>
+    <input 
+      formControlName="fechaNacimiento" 
+      type="text" 
+      placeholder="Fecha de nacimiento" 
+      onfocus="(this.type='date')" 
+      onblur="(this.value ? this.type='date' : this.type='text')">
+      
+    @if (submitted && formCliente.get('fechaNacimiento')?.invalid) {
+      <div class="error">
+        @if (formCliente.get('fechaNacimiento')?.hasError('required')) {
+          <span>Campo incompleto</span>
+        } @else if (formCliente.get('fechaNacimiento')?.hasError('menorDeEdad')) {
+          <span>Debes tener al menos 13 años para registrarte</span>
+        }
+      </div>
+    }
+  </div>
 
-    <div class="form-group">
-      <label for="fechaNacimiento">Fecha de nacimiento:</label>
-      <input id="fechaNacimiento" [(ngModel)]="cliente.fechaNacimiento" name="fechaNacimiento" type="date" required />
-    </div>
+  <!-- Tipo de sangre -->
+  <div>
+    <input formControlName="tipoSangre" placeholder="Tipo de sangre">
+    @if (submitted && formCliente.get('tipoSangre')?.invalid) {
+      <div class="error">
+        Campo incompleto
+      </div>
+    }
+  </div>
 
-    <div class="form-group">
-      <label for="tipoSangre">Tipo de sangre:</label>
-      <input id="tipoSangre" [(ngModel)]="cliente.tipoSangre" name="tipoSangre" required />
-    </div>
+  <!-- Color de ojos -->
+  <div>
+    <input formControlName="colorOjos" placeholder="Color de ojos">
+    @if (submitted && formCliente.get('colorOjos')?.invalid) {
+      <div class="error">
+        Campo incompleto
+      </div>
+    }
+  </div>
 
-    <div class="form-group">
-      <label for="colorOjos">Color de ojos:</label>
-      <input id="colorOjos" [(ngModel)]="cliente.colorOjos" name="colorOjos" required />
-    </div>
+  <!-- Vacaciones -->
+  <div>
+    <input formControlName="vacaciones" type="number" placeholder="Días de vacaciones">
+    @if (submitted && formCliente.get('vacaciones')?.invalid) {
+      <div class="error">
+        Campo incompleto o número inválido
+      </div>
+    }
+  </div>
 
-    <div class="form-group">
-      <label for="vacaciones">Días de vacaciones por año:</label>
-      <input id="vacaciones" [(ngModel)]="cliente.vacaciones" name="vacaciones" type="number" required />
-    </div>
-
-    <button type="submit">Registrarse</button>
-    <button type="button" (click)="volverAlLogin()">Volver al Login</button>
-  </form>
-</div>
+  <button type="submit">Registrarse</button>
+  <button type="button" (click)="volverAlLogin()">Atrás</button>
+</form>

@@ -1,0 +1,113 @@
+.cartelera-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h2 {
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+  color: #222;
+}
+
+/* Grid Adaptativo */
+.grid-cartelera {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 25px;
+}
+
+/* Estilo de Tarjeta */
+.card-pelicula {
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-pelicula:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Imagen y Overlay interactivo */
+.poster-wrapper {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  cursor: pointer;
+  overflow: hidden;
+  background-color: #f0f0f0;
+}
+
+.poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.poster-wrapper:hover .poster-img {
+  transform: scale(1.05);
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  font-weight: 600;
+}
+
+.poster-wrapper:hover .overlay {
+  opacity: 1;
+}
+
+/* Información */
+.card-info {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.titulo {
+  font-size: 1.1rem;
+  margin: 0 0 10px 0;
+  color: #111;
+  font-weight: 700;
+}
+
+.detalle {
+  font-size: 0.85rem;
+  color: #555;
+  margin: 3px 0;
+}
+
+.puntaje-badge {
+  margin-top: auto;
+  padding-top: 10px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: #d97706;
+}
+
+.sin-peliculas, .loading {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 1.1rem;
+}
+

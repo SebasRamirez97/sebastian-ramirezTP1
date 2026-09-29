@@ -1,0 +1,36 @@
+<div class="cartelera-container">
+  <h2>🎬 Cartelera de Cine</h2>
+
+  @if (cargando) {
+    <p class="loading">Cargando películas...</p>
+  } @else {
+    <div class="grid-cartelera">
+      @for (pelicula of peliculas; track pelicula.id) {
+        <div class="card-pelicula">
+          <!-- Imagen sobre la cual se hace clic -->
+          <div class="poster-wrapper" (click)="verDetalle(pelicula.id)">
+            <img [src]="pelicula.imagen" [alt]="pelicula.nombre" class="poster-img">
+            <div class="overlay">
+              <span>Ver detalles</span>
+            </div>
+          </div>
+
+          <!-- Información de la película -->
+          <div class="card-info">
+            <h3 class="titulo">{{ pelicula.nombre }}</h3>
+            <p class="detalle">⏱️ <strong>Duración:</strong> {{ pelicula.duracion }} min</p>
+            <p class="detalle">📅 <strong>Estreno:</strong> {{ pelicula.fecha_estreno | date:'dd/MM/yyyy' }}</p>
+            
+            <div class="puntaje-badge">
+              ⭐ <span>{{ pelicula.puntaje ? (pelicula.puntaje | number:'1.1-2') : '0.0' }}</span> / 5
+            </div>
+          </div>
+        </div>
+      } @empty {
+        <div class="sin-peliculas">
+          <p>No hay películas en cartelera actualmente.</p>
+        </div>
+      }
+    </div>
+  }
+</div>

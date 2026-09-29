@@ -1,58 +1,21 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
+import { RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet,RouterModule } from '@angular/router'; // 👈 importa router-outlet
-import { AuthService } from './services/auth.service';
-import { ClienteMetadata, EmpleadoMetadata, AdminMetadata, AnonimoMetadata } from './models/user-metadata';
-import { SidebarComponent } from './components/sidebar/sidebar.component'; // 👈 importa tu sidebar
-import { Router } from '@angular/router';
+import { SidebarComponent } from './components/sidebar/sidebar.component'; // 👈 Ajusta la ruta a tu componente
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet,RouterModule, SidebarComponent],
+  imports: [CommonModule, RouterOutlet, SidebarComponent],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
-export class App implements OnInit {
-  rol: string = '';
+export class AppComponent {
 
-    constructor(private authService: AuthService, public router: Router) {}
-
-  async ngOnInit() {
-    // 1. Intentar obtener cliente registrado (Supabase Auth)
-    const user = await this.authService.getUser();
-    if (user) {
-      // 👇 casteo según el rol
-      const metadata = user.user_metadata as ClienteMetadata | EmpleadoMetadata | AdminMetadata;
-      this.rol = metadata.rol ?? '';
-      return;
-    }
-    const rolGuardado = localStorage.getItem('rol');
-    if (rolGuardado) {
-      this.rol = rolGuardado;
-    return;
-  }
-
-    // 2. Intentar obtener cliente anónimo (localStorage)
-    const anonimo = this.authService.getAnonimo();
-    if (anonimo) {
-      const metadata = anonimo as AnonimoMetadata;
-      this.rol = metadata.rol;
-      return;
-    }
-    // 3. Si no hay sesión activa
-    this.rol = '';
-  }
+  constructor(private router: Router) {}
 
   mostrarSidebar(): boolean {
-    const rutasOcultas = ['/login', '/register'];
-    return !rutasOcultas.includes(this.router.url);
-  }
-
-  async cerrarSesion() {
-    await this.authService.signOut();
-    localStorage.removeItem('rol'); 
-    this.router.navigate(['/login']);
+    const rutaActual = this.router.url;
+    return !rutaActual.includes('/login') && !rutaActual.includes('/register');
   }
 }
-

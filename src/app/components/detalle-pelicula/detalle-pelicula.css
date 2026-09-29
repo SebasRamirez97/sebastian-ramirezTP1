@@ -1,0 +1,163 @@
+.container-detalle {
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 25px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.panel-admin {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+/* Disposición Superior de dos columnas */
+.seccion-superior {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 25px;
+}
+
+.columna-izquierda {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+}
+
+.poster {
+  width: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.columna-derecha {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.titulo-pelicula {
+  margin: 0 0 10px 0;
+  font-size: 2rem;
+  color: #111;
+}
+
+.dato {
+  font-size: 1.05rem;
+  margin: 4px 0;
+  color: #333;
+}
+
+/* Edición */
+.campo-edicion {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.campo-edicion label {
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: #555;
+}
+
+.campo-edicion input, .campo-edicion textarea {
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.nota-no-editable {
+  color: #888;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* Sinopsis */
+.seccion-sinopsis {
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+  margin-bottom: 25px;
+}
+
+.texto-sinopsis {
+  line-height: 1.6;
+  color: #444;
+  font-size: 1.05rem;
+}
+
+/* Botón Funciones */
+.seccion-boton-funciones {
+  text-align: center;
+  margin: 30px 0;
+}
+
+.btn-funciones {
+  background-color: #e63946;
+  color: white;
+  padding: 14px 28px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-funciones:hover {
+  background-color: #d62828;
+}
+
+/* Reseñas */
+.seccion-resenas {
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+}
+
+.sin-resenas {
+  color: #777;
+  font-style: italic;
+  margin-top: 10px;
+}
+
+/* Botones de Admin */
+.btn-editar { background: #3b82f6; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+.btn-guardar { background: #10b981; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+.btn-cancelar { background: #6b7280; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+.btn-eliminar { background: #ef4444; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; margin-left: auto; }
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.seccion-volver {
+  margin-bottom: 15px;
+}
+
+.btn-volver {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #ccc;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+
+.btn-volver:hover {
+  background-color: #e0e0e0;
+}

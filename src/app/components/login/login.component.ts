@@ -18,36 +18,34 @@ export class LoginComponent {
   constructor(private authService: AuthService, private router: Router) {}
 
   async login() {
-    try {
-      // 🔹 Login único con Supabase Auth
-      const result = await this.authService.signIn(this.email, this.password);
+  try {
+    // 🔹 Retorna el usuario enriquecido con la propiedad "perfil"
+    const usuario = await this.authService.signIn(this.email, this.password);
 
-      if (result?.user) {
-        localStorage.removeItem('clienteAnonimo'); // limpiar estado anónimo
+    if (usuario) {
+      localStorage.removeItem('clienteAnonimo'); // Limpiar estado anónimo
 
-        // 🔹 Leer rol desde metadata
-        const rol = result.user.user_metadata?.['rol'];
-        if (rol) {
-           localStorage.setItem('rol', rol);
-        }
-        if (rol === 'admin') {
-          this.router.navigate(['/home']); // Home mostrará sección admin
-        } else if (rol === 'empleado') {
-          this.router.navigate(['/home']); // Home mostrará sección empleado
-        } else if (rol === 'cliente') {
-          this.router.navigate(['/home']); // Home mostrará sección cliente
-        } else {
-          alert('Rol no reconocido');
-        }
-        return;
+      // 🔹 Leer el rol desde "perfil" (Base de Datos) en lugar de user_metadata
+      const rol = usuario.perfil?.rol;
+
+      if (rol) {
+        localStorage.setItem('rol', rol);
       }
 
-      alert('Credenciales inválidas');
-    } catch (err: any) {
-      console.error('Error en login:', err.message);
-      alert('Error al iniciar sesión');
+      if (rol === 'admin' || rol === 'empleado' || rol === 'cliente') {
+        this.router.navigate(['/home']);
+      } else {
+        alert('Rol no reconocido');
+      }
+      return;
     }
+
+    alert('Credenciales inválidas');
+  } catch (err: any) {
+    console.error('Error en login:', err.message);
+    alert('Error al iniciar sesión');
   }
+}
 
   loginAnonimo() {
     const cliente = this.authService.loginAnonimo(this.nombreAnonimo);

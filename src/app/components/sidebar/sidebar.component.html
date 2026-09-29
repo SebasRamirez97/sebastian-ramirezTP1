@@ -1,34 +1,43 @@
 <aside class="sidebar">
   <h2>Menú</h2>
   <ul>
-    <!-- Admin -->
-    <ng-container *ngIf="rol === 'admin'">
+    <!-- Administrador -->
+    @if (rol === 'admin') {
       <li><a routerLink="/home">🏠 Inicio</a></li>
-      <li><a routerLink="/peliculas">🎬 Películas</a></li>
+      <li><a routerLink="/cartelera">🎬 Cartelera</a></li>
+      <li><a routerLink="/armar-cartelera">➕ Crear Película</a></li>
+      <li><a routerLink="/funciones">📅 Cargar Funciones</a></li>
       <li><a routerLink="/registrar-empleado">📝 Registrar Empleado</a></li>
-    </ng-container>
-
-    <!-- Cliente -->
-    <ng-container *ngIf="rol === 'cliente'">
-      <li><a routerLink="/home">🏠 Inicio</a></li>
-      <li><a routerLink="/peliculas">🎬 Películas</a></li>
-      
-    </ng-container>
+    }
 
     <!-- Empleado -->
-    <ng-container *ngIf="rol === 'empleado'">
+    @if (rol === 'empleado') {
+      <li><a routerLink="/home">🏠 Inicio</a></li>
+      <li><a routerLink="/cartelera">🎬 Ver Cartelera</a></li>
+      <li><a routerLink="/funciones">📅 Cargar Funciones</a></li>
       <li><a routerLink="/verificar-entrada">✅ Verificar Entrada</a></li>
-    </ng-container>
+    }
+
+    <!-- Cliente -->
+    @if (rol === 'cliente') {
+      <li><a routerLink="/home">🏠 Inicio</a></li>
+      <li><a routerLink="/cartelera">🎬 Cartelera</a></li>
+      <li><a routerLink="/mis-entradas">🎟️ Mis Entradas</a></li>
+    }
 
     <!-- Anónimo -->
-    <ng-container *ngIf="rol === 'anonimo'">
+    @if (rol === 'anonimo') {
       <li><a routerLink="/home">🏠 Inicio</a></li>
-    </ng-container>
+      <li><a routerLink="/cartelera">🎬 Ver Cartelera</a></li>
+    }
   </ul>
 
-  <!-- Footer -->
+  <!-- Footer con lógica diferida según el tipo de usuario -->
   <div class="sidebar-footer">
-    <button *ngIf="rol !== 'anonimo'" (click)="cerrarSesion()">🚪 Cerrar sesión</button>
-    <button *ngIf="rol === 'anonimo'" (click)="salirAnonimo()">🚪 Salir</button>
+    @if (rol === 'anonimo') {
+      <button (click)="salirAnonimo()">🚪 Salir</button>
+    } @else {
+      <button (click)="cerrarSesion()">🚪 Cerrar sesión</button>
+    }
   </div>
 </aside>

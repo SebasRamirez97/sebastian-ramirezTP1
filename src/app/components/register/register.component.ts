@@ -1,55 +1,75 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
+import { FormGroup, FormControl, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+
+export function mayorDeEdadValidator(edadMinima: number): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    if (!control.value) {
+      return null; // Si está vacío, de eso se encarga Validators.required
+    }
+
+    const fechaNacimiento = new Date(control.value);
+    const hoy = new Date();
+
+    // Cálculo exacto de la edad
+    let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+    const mes = hoy.getMonth() - fechaNacimiento.getMonth();
+
+    if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
+      edad--;
+    }
+
+    return edad >= edadMinima ? null : { menorDeEdad: true };
+  };
+}
+
+
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [FormsModule],
+  imports: [ReactiveFormsModule, CommonModule],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.css']
 })
 export class RegisterComponent {
-  cliente = {
-    email: '',
-    password: '',
-    nombre: '',
-    apellido: '',
-    fechaNacimiento: '',
-    tipoSangre: '',
-    colorOjos: '',
-    vacaciones: 0
-  };
+  // 🔹 Definición del formulario reactivo
+  formCliente = new FormGroup({
+    email: new FormControl('', [Validators.required, Validators.email]),
+    password: new FormControl('', [Validators.required, Validators.minLength(6)]),
+    nombre: new FormControl('', [Validators.required, Validators.minLength(3)]),
+    apellido: new FormControl('', [Validators.required]),
+    fechaNacimiento: new FormControl('', [Validators.required,mayorDeEdadValidator(13)]),
+    tipoSangre: new FormControl('', [Validators.required]),
+    colorOjos: new FormControl('', [Validators.required]),
+    vacaciones: new FormControl('', [Validators.required, Validators.min(0)])
+  });
 
   constructor(private authService: AuthService, private router: Router) {}
-
+  submitted = false;
   async registrarCliente() {
-    try {
-      const res = await this.authService.signUpCliente(this.cliente);
-      console.log('Cliente registrado:', res);
-      this.router.navigate(['/login']);
-    } catch (err: any) {
-      console.error('Error en registro:', err.message);
-      alert('Error al registrar cliente');
-    }
+    this.submitted = true;
+  if (this.formCliente.invalid) {
+    this.formCliente.markAllAsTouched(); // 👈 fuerza mostrar errores
+    return; // no envía nada
   }
 
-  volverAlLogin() {
-  // Reinicia todos los campos del cliente
-  this.cliente = {
-    email: '',
-    password: '',
-    nombre: '',
-    apellido: '',
-    fechaNacimiento: '',
-    tipoSangre: '',
-    colorOjos: '',
-    vacaciones: 0
-  };
-
-  // Navega al login
-  this.router.navigate(['/login']);
+  try {
+    const cliente = this.formCliente.value;
+    const res = await this.authService.signUpCliente(cliente as any);
+    console.log('Cliente registrado:', res);
+    this.router.navigate(['/login']);
+  } catch (err: any) {
+    console.error('Error en registro:', err.message);
+    alert('Error al registrar cliente');
   }
 }
 
+  volverAlLogin() {
+  this.submitted = false; // 👈 Reinicia la bandera
+  this.formCliente.reset();
+  this.router.navigate(['/login']);
+}
+}

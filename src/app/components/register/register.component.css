@@ -43,3 +43,16 @@ button {
 button:hover {
   background-color: #219150;
 }
+.error {
+  color: #e63946; /* Color rojo */
+  font-size: 0.85rem;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+/* (Opcional) Resalta el borde de los inputs cuando son inválidos y fueron tocados */
+input.ng-invalid.ng-touched {
+  border: 1px solid #e63946;
+  outline: none;
+}

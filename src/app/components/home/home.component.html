@@ -1,1 +1,54 @@
-<p>home works!</p>
+<div class="home-container">
+  <!-- Encabezado Principal -->
+  <header class="hero-header">
+    <h1>Bienvenido a MarkaCine Mañanats</h1>
+    <p class="subtitulo">Descubre los mejores títulos y las películas mejor valoradas por nuestra comunidad.</p>
+  </header>
+
+  <!-- Sección de Películas Destacadas -->
+  <section class="seccion-destacadas">
+    <h2>⭐ Las 3 Películas Mejor Valoradas</h2>
+
+    @if (cargando) {
+      <p class="loading">Cargando las películas destacadas...</p>
+    } @else {
+      <div class="grid-cartelera">
+        @for (pelicula of topPeliculas; track pelicula.id) {
+          <div class="card-pelicula">
+            <!-- Imagen interactiva -->
+            <div class="poster-wrapper" (click)="verDetalle(pelicula.id)">
+              <img [src]="pelicula.imagen" [alt]="pelicula.nombre" class="poster-img">
+              <div class="overlay">
+                <span>Ver detalles</span>
+              </div>
+            </div>
+
+            <!-- Información resumida -->
+            <div class="card-info">
+              <h3 class="titulo">{{ pelicula.nombre }}</h3>
+              <p class="detalle">⏱️ <strong>Duración:</strong> {{ pelicula.duracion }} min</p>
+              <p class="detalle">📅 <strong>Estreno:</strong> {{ pelicula.fecha_estreno | date:'dd/MM/yyyy' }}</p>
+              
+              <div class="puntaje-badge">
+                ⭐ <span>{{ pelicula.puntaje ? (pelicula.puntaje | number:'1.1-2') : '0.0' }}</span> / 5
+              </div>
+
+              <!-- Botón explícito para ver detalles como en cartelera -->
+            </div>
+          </div>
+        } @empty {
+          <div class="sin-peliculas">
+            <p>No hay películas destacadas para mostrar actualmente.</p>
+          </div>
+        }
+      </div>
+
+      <!-- Botón para explorar todo el catálogo -->
+      <div class="contenedor-accion">
+        <button (click)="verCarteleraCompleta()" class="btn-cartelera">
+          🎬 Ver Cartelera Completa
+        </button>
+      </div>
+    }
+  </section>
+</div>

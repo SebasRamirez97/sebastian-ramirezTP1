@@ -1,0 +1,107 @@
+@if (cargando) {
+  <p class="loading">Cargando detalles de la película...</p>
+} @else if (pelicula) {
+  <div class="container-detalle">
+
+    <!-- ⬅️ Botón para volver al listado -->
+    <div class="seccion-volver">
+      <button (click)="volver()" class="btn-volver">
+        ⬅️ Volver a cartelera
+      </button>
+    </div>
+    <!-- Panel de Control para el Administrador -->
+    @if (esAdmin) {
+      <div class="panel-admin">
+        @if (!modoEdicion) {
+          <button (click)="activarEdicion()" class="btn-editar">✏️ Editar Película</button>
+        } @else {
+          <button (click)="guardarCambios()" class="btn-guardar">💾 Guardar Cambios</button>
+          <button (click)="cancelarEdicion()" class="btn-cancelar">❌ Cancelar</button>
+        }
+        <button (click)="eliminarPelicula()" class="btn-eliminar">🗑️ Eliminar Película</button>
+      </div>
+    }
+
+    <!-- 1. PARTE SUPERIOR: Imagen (Izquierda) y Detalles (Derecha) -->
+    <div class="seccion-superior">
+      
+      <!-- Izquierda: Imagen -->
+      <div class="columna-izquierda">
+        <img [src]="modoEdicion ? peliculaEditada.imagen : pelicula.imagen" [alt]="pelicula.nombre" class="poster">
+        
+        @if (modoEdicion) {
+          <div class="campo-edicion">
+            <label>URL de la imagen:</label>
+            <input [(ngModel)]="peliculaEditada.imagen" type="text" placeholder="https://...">
+          </div>
+        }
+      </div>
+
+      <!-- Derecha: Detalles -->
+      <div class="columna-derecha">
+        @if (!modoEdicion) {
+          <h1 class="titulo-pelicula">{{ pelicula.nombre }}</h1>
+          <p class="dato"><strong>⏱️ Duración:</strong> {{ pelicula.duracion }} minutos</p>
+          <p class="dato"><strong>📅 Fecha de estreno:</strong> {{ pelicula.fecha_estreno | date:'dd/MM/yyyy' }}</p>
+        } @else {
+          <div class="campo-edicion">
+            <label>Título:</label>
+            <input [(ngModel)]="peliculaEditada.nombre" type="text">
+          </div>
+
+          <div class="campo-edicion">
+            <label>Duración (minutos):</label>
+            <input [(ngModel)]="peliculaEditada.duracion" type="number">
+          </div>
+
+          <div class="campo-edicion">
+            <label>Fecha de estreno:</label>
+            <input [(ngModel)]="peliculaEditada.fecha_estreno" type="date">
+          </div>
+        }
+
+        <!-- Puntaje: NO editable por el administrador -->
+        <div class="puntaje-box">
+          <p class="dato"><strong>⭐ Puntaje:</strong> {{ pelicula.puntaje ? (pelicula.puntaje | number:'1.1-2') : '0.0' }} / 5</p>
+          @if (modoEdicion) {
+            <small class="nota-no-editable">(El puntaje se calcula automáticamente con las reseñas)</small>
+          }
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 2. SINOPSIS (Por debajo de la imagen y los detalles) -->
+    <div class="seccion-sinopsis">
+      <h3>Sinopsis</h3>
+      @if (!modoEdicion) {
+        <p class="texto-sinopsis">{{ pelicula.sinopsis }}</p>
+      } @else {
+        <div class="campo-edicion">
+          <textarea [(ngModel)]="peliculaEditada.sinopsis" rows="4"></textarea>
+        </div>
+      }
+    </div>
+
+    <!-- 3. BOTÓN DE FUNCIONES DISPONIBLES (Debajo de la sinopsis) -->
+    <div class="seccion-boton-funciones">
+      <button (click)="irAFunciones()" class="btn-funciones">
+        🎟️ Ver funciones disponibles de esta película
+      </button>
+    </div>
+
+    <!-- 4. RESEÑAS (Debajo del botón) -->
+    <div class="seccion-resenas">
+      <h3>Reseñas y Opiniones</h3>
+      @if (modoEdicion) {
+        <small class="nota-no-editable">(Las reseñas son creadas por los clientes y no se pueden editar aquí)</small>
+      }
+
+      <!-- Contenedor de reseñas (Se poblará desde la tabla resenas) -->
+      <div class="lista-resenas">
+        <p class="sin-resenas">Aún no hay reseñas registradas para esta película.</p>
+      </div>
+    </div>
+
+  </div>
+}
