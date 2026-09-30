@@ -1,0 +1,67 @@
+<div class="admin-container">
+  <div class="header-section">
+    <h2>📅 Agenda General de Funciones</h2>
+    <p class="subtitle">Vista administrativa para el control de horarios y salas.</p>
+  </div>
+
+  @if (cargando) {
+    <p class="loading">Cargando la agenda completa...</p>
+  } @else {
+    @if (funciones.length === 0) {
+      <div class="alert alert-info">
+        No hay funciones programadas en el sistema. Ve a "Crear Función" para empezar.
+      </div>
+    } @else {
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Hora</th>
+              <th>Película</th>
+              <th>Sala</th>
+              <th>Formato</th>
+              <th>Precio ($)</th>
+              <th>Precio (Pts)</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (funcion of funciones; track funcion.id) {
+              <tr>
+                <td class="fecha">{{ funcion.fecha_inicio | date: 'dd/MM/yyyy' }}</td>
+                <td class="hora">{{ funcion.fecha_inicio | date: 'HH:mm' }} hs</td>
+
+                <!-- IMPORTANTE: Asegúrate de que getFunciones() en tu servicio traiga peliculas(titulo) -->
+                <td class="pelicula">{{ funcion.peliculas?.nombre || 'Desconocida' }}</td>
+
+                <td>{{ funcion.salas?.nombre || 'No asignada' }}</td>
+                <td>
+                  <span class="badge">{{ funcion.formato }}</span>
+                </td>
+                <td>${{ funcion.precio_pesos }}</td>
+                <td>{{ funcion.precio_puntos }}</td>
+
+                <td class="acciones">
+                  <!-- Botón de Editar que lleva el ID dinámico a la ruta -->
+                  <button
+                    class="btn-icon btn-edit"
+                    [routerLink]="['/editar-funcion', funcion.id]"
+                    title="Editar"
+                  >
+                    ✏️
+                  </button>
+
+                  <!-- Botón de Eliminar que ya tenías o programamos antes -->
+                  <button class="btn-icon btn-delete" (click)="eliminar(funcion)" title="Eliminar">
+                    🗑️
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>

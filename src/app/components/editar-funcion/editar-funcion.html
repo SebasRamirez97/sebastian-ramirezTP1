@@ -1,0 +1,68 @@
+<div class="form-container">
+  <h2>✏️ Editar Función</h2>
+
+  @if (cargando) {
+    <p class="loading">Cargando datos de la función...</p>
+  } @else {
+    
+    @if (mensajeExito) {
+      <div class="alert alert-success">{{ mensajeExito }}</div>
+    }
+    
+    @if (mensajeError) {
+      <div class="alert alert-danger">{{ mensajeError }}</div>
+    }
+
+    <form [formGroup]="funcionForm" (ngSubmit)="onSubmit()">
+      
+      <!-- Película -->
+      <div class="form-group">
+        <label for="pelicula_id">Película</label>
+        <select id="pelicula_id" formControlName="pelicula_id" class="form-control">
+          <option value="" disabled>Seleccione una película</option>
+          @for (pelicula of peliculas; track pelicula.id) {
+            <option [value]="pelicula.id">{{ pelicula.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Formato de Sala -->
+      <div class="form-group">
+        <label for="formato">Formato</label>
+        <select id="formato" formControlName="formato" class="form-control">
+          @for (fmt of formatos; track fmt) {
+            <option [value]="fmt">{{ fmt }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Fecha y Hora -->
+      <div class="form-group">
+        <label for="fecha_inicio">Fecha y Hora de Inicio</label>
+        <input type="datetime-local" id="fecha_inicio" formControlName="fecha_inicio" class="form-control" />
+      </div>
+
+      <!-- Precios -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="precio_pesos">Precio en Pesos ($)</label>
+          <input type="number" id="precio_pesos" formControlName="precio_pesos" class="form-control" min="0" />
+        </div>
+
+        <div class="form-group">
+          <label for="precio_puntos">Precio en Puntos</label>
+          <input type="number" id="precio_puntos" formControlName="precio_puntos" class="form-control" min="0" />
+        </div>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="guardando">
+          {{ guardando ? 'Guardando...' : 'Actualizar Función' }}
+        </button>
+        <button type="button" class="btn btn-secondary" routerLink="/lista-funciones">Cancelar</button>
+      </div>
+
+    </form>
+  }
+</div>

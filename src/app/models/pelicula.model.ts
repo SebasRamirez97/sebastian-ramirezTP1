@@ -2,6 +2,7 @@ export interface Resena {
   id?: string;
   pelicula_id: string;
   cliente_id: string;
+  cliente_nombre?: string;
   puntaje: number; // De 1 a 5
   comentario: string;
   created_at?: string;
@@ -15,5 +16,6 @@ export interface Pelicula {
   duracion: number; // En minutos
   sinopsis: string;
   puntaje?: number;
+  cantidad_veces_vendida?: number;
   resenas?: Resena[];
 }

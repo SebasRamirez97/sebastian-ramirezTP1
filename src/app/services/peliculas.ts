@@ -96,17 +96,17 @@ export class PeliculasService {
 
   // 🔹 Obtener las N películas con mayor puntaje (para el Home)
   async getTopPeliculas(limite: number = 3): Promise<Pelicula[]> {
-    const { data, error } = await supabase
-      .from('peliculas')
-      .select('*')
-      .order('puntaje', { ascending: false }) // Ordena de mayor a menor puntaje
-      .limit(limite); // Trae solo las primeras N
+  const { data, error } = await supabase
+    .from('peliculas')
+    .select('*')
+    .order('cantidad_veces_vendida', { ascending: false }) // 👈 Cambiado: ordena de mayor a menor ventas
+    .limit(limite); // Trae las primeras 3 (o el límite especificado)
 
-    if (error) {
-      console.error('Error al obtener películas destacadas:', error.message);
-      throw error;
-    }
-
-    return (data as Pelicula[]) || [];
+  if (error) {
+    console.error('Error al obtener películas más vendidas:', error.message);
+    throw error;
   }
+
+  return (data as Pelicula[]) || [];
+}
 }

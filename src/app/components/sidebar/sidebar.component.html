@@ -6,7 +6,9 @@
       <li><a routerLink="/home">🏠 Inicio</a></li>
       <li><a routerLink="/cartelera">🎬 Cartelera</a></li>
       <li><a routerLink="/armar-cartelera">➕ Crear Película</a></li>
-      <li><a routerLink="/funciones">📅 Cargar Funciones</a></li>
+      <li><a routerLink="/crear-funcion">🍿 Crear Función</a></li>
+      <!-- 👇 AQUÍ AGREGAMOS EL ENLACE 👇 -->
+      <li><a routerLink="/lista-funciones">📅 Agenda Funciones</a></li> 
       <li><a routerLink="/registrar-empleado">📝 Registrar Empleado</a></li>
     }
 
@@ -14,7 +16,6 @@
     @if (rol === 'empleado') {
       <li><a routerLink="/home">🏠 Inicio</a></li>
       <li><a routerLink="/cartelera">🎬 Ver Cartelera</a></li>
-      <li><a routerLink="/funciones">📅 Cargar Funciones</a></li>
       <li><a routerLink="/verificar-entrada">✅ Verificar Entrada</a></li>
     }
 

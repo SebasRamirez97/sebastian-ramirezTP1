@@ -1,0 +1,96 @@
+.admin-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+}
+
+.header-section {
+  margin-bottom: 30px;
+}
+
+h2 {
+  font-size: 26px;
+  color: #222;
+  margin-bottom: 5px;
+  border-bottom: 3px solid #007bff;
+  display: inline-block;
+  padding-bottom: 8px;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 15px;
+  margin-top: 5px;
+}
+
+.loading {
+  text-align: center;
+  font-size: 18px;
+  color: #555;
+  padding: 40px;
+}
+
+.alert-info {
+  background-color: #e9ecef;
+  border-left: 5px solid #007bff;
+  padding: 15px 20px;
+  border-radius: 4px;
+  color: #495057;
+}
+
+/* Estilos de la tabla administrativa */
+.table-responsive {
+  overflow-x: auto;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  border-radius: 8px;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+}
+
+.admin-table th, .admin-table td {
+  padding: 14px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.admin-table th {
+  background-color: #f8f9fa;
+  color: #333;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-table tbody tr:hover {
+  background-color: #f1f7ff;
+}
+
+.fecha {
+  color: #555;
+}
+
+.hora {
+  font-weight: bold;
+  color: #007bff;
+}
+
+.pelicula {
+  font-weight: 600;
+  color: #222;
+}
+
+.badge {
+  background-color: #343a40;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}

@@ -10,7 +10,7 @@ import { Pelicula } from '../../models/pelicula.model';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './detalle-pelicula.html',
-  styleUrls: ['./detalle-pelicula.css']
+  styleUrls: ['./detalle-pelicula.css'],
 })
 export class DetallePeliculaComponent implements OnInit {
   pelicula: Pelicula | null = null;
@@ -23,7 +23,7 @@ export class DetallePeliculaComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private peliculasService: PeliculasService,
-    private cdr: ChangeDetectorRef // 👈 1. Inyectamos ChangeDetectorRef
+    private cdr: ChangeDetectorRef, // 👈 1. Inyectamos ChangeDetectorRef
   ) {}
 
   async ngOnInit() {
@@ -69,7 +69,7 @@ export class DetallePeliculaComponent implements OnInit {
     try {
       const actualizada = await this.peliculasService.actualizarPelicula(
         this.pelicula.id,
-        this.peliculaEditada
+        this.peliculaEditada,
       );
       this.pelicula = actualizada;
       this.modoEdicion = false;
@@ -97,14 +97,14 @@ export class DetallePeliculaComponent implements OnInit {
     }
   }
 
-  irAFunciones() {
-    if (this.pelicula?.id) {
-      this.router.navigate(['/funciones'], { queryParams: { peliculaId: this.pelicula.id } });
+  irAFunciones(): void {
+    if (this.pelicula && this.pelicula.id) {
+      // Navega a la ruta: /peliculas/123/funciones
+      this.router.navigate(['/peliculas', this.pelicula.id, 'funciones']);
     }
   }
 
   volver() {
-  this.router.navigate(['/cartelera']); // O ['/cartelera'] según tu nombre de ruta
-}
-
+    this.router.navigate(['/cartelera']); // O ['/cartelera'] según tu nombre de ruta
+  }
 }
