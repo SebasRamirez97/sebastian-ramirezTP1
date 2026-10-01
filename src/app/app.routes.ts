@@ -15,7 +15,8 @@ import { ListaFuncionesComponent } from './components/lista-funciones/lista-func
 import { EditarFuncionComponent } from './components/editar-funcion/editar-funcion';
 
 import { RegistrarEmpleadoComponent } from './components/registrar-empleado/registrar-empleado.componet';
-import { VerificarEntradaComponent } from './components/verificar-entrada/verificar-entrada.component';
+import { SeleccionarAsientosComponent } from './components/seleccionar-asientos/seleccionar-asientos';
+import { VerificarEntradaComponent } from './components/verificar-entrada/verificar-entrada.component'; //proximamente
 
 // 🔹 Importación de Funciones Guard
 import { authGuard } from './guards/auth.guard';
@@ -39,6 +40,10 @@ export const routes: Routes = [
   { path: 'peliculas/:id/funciones', component: FuncionesPeliculaComponent, canActivate: [authGuard] },
   { path: 'lista-funciones', component: ListaFuncionesComponent,canActivate: [adminGuard] },
   { path: 'editar-funcion/:id', component: EditarFuncionComponent, canActivate: [adminGuard]}, // Protegida para que solo el admin pueda editar
+
+  //Para entradas de cine
+
+  { path: 'seleccionar-asientos/:funcionId', component: SeleccionarAsientosComponent },
 
 
   // 🍿 Funciones de Cine (Admin)

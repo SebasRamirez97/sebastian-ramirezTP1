@@ -7,23 +7,27 @@
   @if (cargando) {
     <p class="loading">Buscando horarios...</p>
   } @else {
-    
     @if (funciones.length === 0) {
-      <p class="alert alert-info">No hay funciones programadas para esta película en este momento.</p>
+      <p class="alert alert-info">
+        No hay funciones programadas para esta película en este momento.
+      </p>
     } @else {
       <div class="lista-funciones">
         @for (funcion of funciones; track funcion.id) {
           <div class="funcion-card">
             <div class="funcion-info">
               <!-- Formateamos la fecha que viene de Supabase -->
-              <h3>📅 {{ funcion.fecha_inicio | date:'dd/MM/yyyy' }} - 🕒 {{ funcion.fecha_inicio | date:'HH:mm' }} hs</h3>
-              
+              <h3>
+                📅 {{ funcion.fecha_inicio | date: 'dd/MM/yyyy' }} - 🕒
+                {{ funcion.fecha_inicio | date: 'HH:mm' }} hs
+              </h3>
+
               <p>
-                <strong>Formato:</strong> {{ funcion.formato }} | 
+                <strong>Formato:</strong> {{ funcion.formato }} |
                 <!-- 👈 Accedemos al nombre de la sala que trajimos con el Join de Supabase -->
                 <strong>Sala:</strong> {{ funcion.salas?.nombre || 'Sala no asignada' }}
               </p>
-              
+
               <p>
                 <strong>Precio:</strong> ${{ funcion.precio_pesos }}
                 @if (funcion.precio_puntos > 0) {
@@ -31,9 +35,9 @@
                 }
               </p>
             </div>
-            
+
             <div class="funcion-accion">
-              <button class="btn-comprar">Comprar Entrada</button>
+              <button [routerLink]="['/seleccionar-asientos', funcion.id]"class="btn-comprar">Comprar Entradas</button>
             </div>
           </div>
         }

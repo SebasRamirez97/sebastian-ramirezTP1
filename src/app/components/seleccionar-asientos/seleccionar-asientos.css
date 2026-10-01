@@ -1,0 +1,201 @@
+/* --- Contenedor general de la sala --- */
+.asientos-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  font-family: sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Pantalla del cine superior */
+.pantalla-cine {
+  width: 80%;
+  background: linear-gradient(to bottom, #333, #666);
+  color: white;
+  text-align: center;
+  margin-top: 10px;
+  padding: 10px;
+  font-weight: bold;
+  border-radius: 4px;
+  margin-bottom: 40px;
+  letter-spacing: 2px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+/* Cuadrícula de la sala */
+.sala-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+/* Cada fila individual */
+.fila-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* Letra de la fila a la izquierda */
+.letra-fila {
+  font-weight: bold;
+  width: 45px; /* Aumentamos ligeramente el ancho para que quepa "J-K" cómodamente */
+  text-align: center;
+  font-size: 1.0rem;
+  color: #444;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Contenedor que agrupa los 3 bloques y los pasillos */
+.bloques-asientos {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Estilos de los bloques individuales */
+.bloque {
+  display: flex;
+  gap: 6px; /* Espacio entre asiento y asiento dentro del bloque */
+}
+
+/* --- PASILLOS --- */
+.pasillo {
+  width: 35px; /* Ancho visual del pasillo entre la sección izquierda-centro y centro-derecha */
+}
+
+/* --- ESTILOS ESPECIALES PARA FILAS ESPECÍFICAS --- */
+/* --- FILA DE DISCAPACITADOS (J-K) CON TAMAÑO DOBLE Y SEPARACIONES ESPECÍFICAS --- */
+
+/* 1. Hacemos que la fila de discapacitados tenga la altura equivalente a dos filas */
+.fila-container.fila-discapacitados {
+  height: 74px; /* (32px de alto de asiento * 2) + espacio vertical adicional */
+  align-items: center;
+}
+
+/* 2. Contenedor de bloques para J-K con el fondo especial */
+.fila-container.fila-discapacitados .bloques-asientos {
+  background-color: #e3f2fd;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px dashed #90caf9;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 3. Estilo específico para los botones de la fila J-K (mantienen tamaño, pero se ven como espacios amplios) */
+.fila-container.fila-discapacitados .btn-asiento {
+  width: 32px;  /* Mantiene el tamaño original del ancho */
+  height: 32px; /* Ocupa el doble de alto para simular el tamaño de dos filas */
+  margin-left: 15px;
+  margin-right: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+
+.fila-container.fila-vip .bloques-asientos {
+  background-color: #fffde7;
+  border: 1px solid #fff59d;
+}
+
+/* ==========================================
+   ESTILOS DE LOS BOTONES DE ASIENTOS (Tus estilos base)
+   ========================================== */
+
+/* Estado Normal: Blanco */
+.btn-asiento {
+  background-color: #ffffff;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Estado Hover: Amarillo (solo si está disponible y no ha sido comprado) */
+.btn-asiento.asiento-libre:hover {
+  background-color: #ffeb3b;
+  border-color: #fbc02d;
+  transform: scale(1.1);
+}
+
+/* Estado Seleccionado por ti: Verde */
+.btn-asiento.asiento-mio {
+  background-color: #4caf50;
+  color: white;
+  border-color: #388e3c;
+}
+
+/* Estado Comprado o Ocupado por otro: Gris */
+.btn-asiento.asiento-ocupado {
+  background-color: #9e9e9e;
+  color: white;
+  border-color: #757575;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* --- Leyenda y Resumen inferior --- */
+.leyenda {
+  display: flex;
+  gap: 20px;
+  margin: 20px 0;
+  font-size: 0.9rem;
+}
+
+.item-leyenda {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cuadrito-asiento-libre {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.cuadrito-asiento-mio {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background-color: #4caf50;
+  border-color: #388e3c;
+}
+
+.cuadrito-asiento-ocupado {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  border-color: #757575;
+  background-color: #9e9e9e;
+}
+
+.cuadrito-asiento-comprado {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
