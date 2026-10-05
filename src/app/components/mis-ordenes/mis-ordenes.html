@@ -1,0 +1,119 @@
+<div class="ordenes-container">
+
+  <div class="header-titulo">
+    <h2>🎟️ Mis Compras y Órdenes</h2>
+    <p>Presenta el código QR o el código de retiro en la entrada del cine.</p>
+  </div>
+
+  @if (cargando) {
+    <div class="loading-container">
+      <p class="loading">Cargando tus órdenes...</p>
+    </div>
+  } @else {
+    @if (misOrdenes.length === 0) {
+      <div class="alert-info">
+        <p>🎬 No tienes compras registradas todavía. ¡Explora la cartelera y reserva tu lugar!</p>
+      </div>
+    } @else {
+      <div class="grid-ordenes">
+        @for (orden of misOrdenes; track orden.id) {
+          <div class="ticket-card">
+            <!-- Sección Superior del Ticket -->
+            <div class="ticket-header">
+              <span class="badge-cine">Cine</span>
+            </div>
+
+            <div class="ticket-body">
+              <!-- Tomamos la peli de la primera entrada asociada a la orden -->
+              <h3 class="pelicula-titulo">
+                {{ orden.entradas?.[0]?.funciones?.peliculas?.nombre || 'Película' }}
+              </h3>
+
+              <div class="ticket-detalles">
+                <div class="detalle-item">
+                  <span class="label">📅 Fecha</span>
+                  <span class="valor">{{ orden.entradas?.[0]?.funciones?.fecha_inicio | date: 'dd/MM/yyyy' }}</span>
+                </div>
+                <div class="detalle-item">
+                  <span class="label">🕒 Hora</span>
+                  <span class="valor">{{ orden.entradas?.[0]?.funciones?.fecha_inicio | date: 'HH:mm' }} hs</span>
+                </div>
+                <div class="detalle-item full-width">
+                  <span class="label">🏢 Sala / Formato</span>
+                  <span class="valor">
+                    {{ orden.entradas?.[0]?.funciones?.salas?.nombre || 'Sala' }} 
+                    ({{ orden.entradas?.[0]?.funciones?.formato || 'Standard' }})
+                  </span>
+                </div>
+                
+                <!-- NUEVO: Mostramos los asientos comprados en esta orden -->
+                <div class="detalle-item full-width">
+                  <span class="label">💺 Asientos</span>
+                  <div class="asientos-tags">
+                    @for (entrada of orden.entradas; track entrada.id) {
+                      <span class="asiento-chip">F: {{ entrada.fila }} - A: {{ entrada.numero_asiento }}</span>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <div class="codigo-seccion">
+                <span class="label-codigo">Código de Retiro:</span>
+                <span class="codigo-badge">{{ orden.codigo_retiro }}</span>
+              </div>
+            </div>
+
+            <!-- Sección Inferior / Acción -->
+            <div class="ticket-footer">
+              <button (click)="verDetallesOrden(orden)" class="btn-qr-ticket">
+                🔍 Ver QR y Detalles
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- Modal / Pantalla flotante con el QR -->
+  @if (ordenSeleccionada) {
+    <div class="modal-overlay" (click)="cerrarDetalles()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Pase de Entrada Digital</h3>
+          <button class="btn-cerrar-cruz" (click)="cerrarDetalles()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <h4>{{ ordenSeleccionada.entradas?.[0]?.funciones?.peliculas?.nombre }}</h4>
+          <p class="modal-sub">
+            {{ ordenSeleccionada.entradas?.[0]?.funciones?.fecha_inicio | date: 'EEEE dd/MM/yyyy - HH:mm' }} hs
+          </p>
+
+          <!-- Opcional en el modal: Mostrar también los asientos en grande -->
+          <p class="modal-asientos-resumen">
+            <strong>Asientos:</strong> 
+            @for (ent of ordenSeleccionada.entradas; track ent.id; let last = $last) {
+              Fila {{ ent.fila }} Asiento {{ ent.numero_asiento }}{{ !last ? ', ' : '' }}
+            }
+          </p>
+
+          <div class="qr-box">
+            <img [src]="'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + ordenSeleccionada.codigo_retiro" alt="QR de Orden">
+            
+            <p class="qr-instruccion">Acerca este código al lector de la entrada</p>
+            
+            <div class="codigo-respaldo-box">
+              <span class="label-respaldo">Código de respaldo:</span>
+              <span class="texto-respaldo">{{ ordenSeleccionada.codigo_retiro }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-cerrar-modal" (click)="cerrarDetalles()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

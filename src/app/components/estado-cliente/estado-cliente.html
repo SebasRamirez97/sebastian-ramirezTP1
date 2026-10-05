@@ -1,0 +1,36 @@
+<div class="estado-cliente-card">
+  @if (cargando) {
+    <p class="loading-text">Cargando perfil...</p>
+  } @else {
+    <div class="cliente-info">
+      <div class="avatar-icono">👤</div>
+      <div class="detalles-usuario">
+        <h4 class="nombre-usuario">
+          {{ cliente.nombre || 'Usuario' }} {{ cliente.apellido || '' }}
+        </h4>
+        <span class="subtext">Mi Cuenta</span>
+      </div>
+    </div>
+
+    <div class="saldos-grid">
+      <div class="saldo-item">
+        <span class="etiqueta">💵 Dinero</span>
+        <span class="valor">$ {{ cliente.dinero | number: '1.2-2' }}</span>
+      </div>
+
+      <div class="saldo-item">
+        <span class="etiqueta">⭐ Puntos</span>
+        <span class="valor">{{ cliente.puntos | number }} pts</span>
+      </div>
+
+      <div class="saldo-item">
+        <span class="etiqueta">🎟️ Créditos</span>
+        <span class="valor">{{ cliente.creditos | number: '1.2-2' }}</span>
+      </div>
+    </div>
+
+    <div class="acciones-cuenta" style="margin-top: 15px; text-align: center">
+      <button class="btn btn-primary" routerLink="/cargar-saldo">➕ Cargar Saldo</button>
+    </div>
+  }
+</div>

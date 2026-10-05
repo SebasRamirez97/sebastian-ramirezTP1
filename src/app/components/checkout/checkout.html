@@ -1,0 +1,54 @@
+<div class="checkout-container">
+  <h2>Resumen de tu Compra</h2>
+
+  @if (cargando) {
+    <p>Cargando detalles...</p>
+  } @else {
+    <div class="resumen-info">
+      <p><strong>Asientos seleccionados:</strong> {{ misAsientos.length }}</p>
+      <p class="precio-total"><strong>Total a pagar:</strong> ${{ totalPagar | number:'1.2-2' }} (o {{ totalPuntos }} Pts)</p>
+    </div>
+
+    <div class="metodos-pago">
+      <label>Selecciona el método de pago:</label>
+      
+      <div class="opcion-pago">
+        <input type="radio" id="efectivo" value="efectivo" [(ngModel)]="metodoPago" name="metodoPago">
+        <label for="efectivo">💵 Dinero en cuenta</label>
+      </div>
+
+      <div class="opcion-pago">
+        <input type="radio" id="puntos" value="puntos" [(ngModel)]="metodoPago" name="metodoPago">
+        <label for="puntos">⭐ Puntos</label>
+      </div>
+
+      <div class="opcion-pago">
+        <input type="radio" id="mixto" value="mixto" [(ngModel)]="metodoPago" name="mixto">
+        <label for="mixto">💳 Mixto (Dinero + Créditos)</label>
+      </div>
+    </div>
+
+    <!-- Sección que aparece solo si selecciona Pago Mixto -->
+    @if (metodoPago === 'mixto') {
+      <div class="seccion-mixto">
+        <label for="creditosUsar">¿Cuántos créditos deseas aplicar?</label>
+        <input 
+          type="number" 
+          id="creditosUsar" 
+          [(ngModel)]="creditosAUsar" 
+          min="0" 
+          [max]="totalPagar"
+          class="input-creditos"
+        />
+        <p class="detalle-calculo">
+          Aplicando <strong>{{ creditosAUsar || 0 }} créditos</strong>, pagarás el resto con <strong>${{ (totalPagar - (creditosAUsar || 0)) | number:'1.2-2' }}</strong> de tu saldo en dinero.
+        </p>
+      </div>
+    }
+
+    <div class="acciones">
+      <button class="btn btn-secundario" (click)="volverSeleccion()">Volver</button>
+      <button class="btn btn-primary" (click)="confirmarPagoFinal()">Confirmar y Pagar 🎟️</button>
+    </div>
+  }
+</div>

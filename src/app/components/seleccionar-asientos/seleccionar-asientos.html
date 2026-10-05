@@ -1,5 +1,11 @@
 <div class="asientos-container">
-  <h2>🎟️ Selecciona tus Asientos</h2>
+  <!-- Cabecera con título y botón de regreso -->
+  <div class="header-asientos">
+    <button class="btn btn-secundario" (click)="volverAFunciones()">
+      ⬅ Volver a Funciones
+    </button>
+    <h2>🎟️ Selecciona tus Asientos</h2>
+  </div>
 
   @if (cargando) {
     <p class="loading">Cargando mapa de la sala...</p>
@@ -107,7 +113,7 @@
         </div>
 
         <button class="btn btn-primary btn-pagar" (click)="procederAlPago()">
-          Confirmar y Comprar
+          Ir a Pagar / Resumen 🛒
         </button>
       }
     </div>

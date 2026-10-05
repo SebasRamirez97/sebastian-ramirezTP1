@@ -15,8 +15,16 @@ import { ListaFuncionesComponent } from './components/lista-funciones/lista-func
 import { EditarFuncionComponent } from './components/editar-funcion/editar-funcion';
 
 import { RegistrarEmpleadoComponent } from './components/registrar-empleado/registrar-empleado.componet';
+
+//Para compras de entrada
 import { SeleccionarAsientosComponent } from './components/seleccionar-asientos/seleccionar-asientos';
+import { CheckoutComponent } from './components/checkout/checkout';
 import { VerificarEntradaComponent } from './components/verificar-entrada/verificar-entrada.component'; //proximamente
+
+//Para Cliente
+import { EstadoClienteComponent } from './components/estado-cliente/estado-cliente';
+import { CargarSaldoComponent } from './components/cargar-saldo/cargar-saldo';
+import { MisOrdenesComponent } from './components/mis-ordenes/mis-ordenes';
 
 // 🔹 Importación de Funciones Guard
 import { authGuard } from './guards/auth.guard';
@@ -44,6 +52,7 @@ export const routes: Routes = [
   //Para entradas de cine
 
   { path: 'seleccionar-asientos/:funcionId', component: SeleccionarAsientosComponent },
+  { path: 'checkout/:funcionId', component: CheckoutComponent },
 
 
   // 🍿 Funciones de Cine (Admin)
@@ -57,6 +66,9 @@ export const routes: Routes = [
 
   // 👤 Cliente
   { path: 'cliente-area', component: HomeComponent, canActivate: [clienteGuard] },
+  { path: 'estado-cliente', component: EstadoClienteComponent, canActivate: [clienteGuard] },
+  { path: 'cargar-saldo', component: CargarSaldoComponent, canActivate: [clienteGuard] },
+  { path: 'mis-ordenes', component: MisOrdenesComponent, canActivate: [clienteGuard] },
 
   // 🔄 Redirecciones
   { path: '', redirectTo: '/login', pathMatch: 'full' },

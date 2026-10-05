@@ -53,6 +53,6 @@ export class FuncionesPeliculaComponent implements OnInit {
   }
 
   volver(): void {
-    this.location.back();
+    this.location.back();  
   }
 }

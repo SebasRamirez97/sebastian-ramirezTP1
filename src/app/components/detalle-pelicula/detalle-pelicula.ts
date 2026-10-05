@@ -1,9 +1,11 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { PeliculasService } from '../../services/peliculas';
 import { Pelicula } from '../../models/pelicula.model';
+import { AuthService } from '../../services/auth.service'; // 👈 Ajusta la ruta de tu servicio de auth
 
 @Component({
   selector: 'app-detalle-pelicula',
@@ -12,28 +14,33 @@ import { Pelicula } from '../../models/pelicula.model';
   templateUrl: './detalle-pelicula.html',
   styleUrls: ['./detalle-pelicula.css'],
 })
-export class DetallePeliculaComponent implements OnInit {
+export class DetallePeliculaComponent implements OnInit, OnDestroy {
   pelicula: Pelicula | null = null;
   peliculaEditada: Partial<Pelicula> = {};
   cargando: boolean = true;
-  esAdmin: boolean = true; // Cambiar según tu lógica de roles/autenticación
   modoEdicion: boolean = false;
+
+  rol: string = ''; // 👈 Variable para almacenar el rol actual
+  private rolSub!: Subscription;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private peliculasService: PeliculasService,
-    private cdr: ChangeDetectorRef, // 👈 1. Inyectamos ChangeDetectorRef
+    private authService: AuthService, // 👈 Inyectamos AuthService
+    private cdr: ChangeDetectorRef,
   ) {}
 
   async ngOnInit() {
-    // Obtener el ID desde la URL (ejemplo /peliculas/:id)
+    // 🔹 Suscribirse a los cambios de rol en tiempo real
+    this.rolSub = this.authService.rol$.subscribe((nuevoRol) => {
+      this.rol = nuevoRol;
+      this.cdr.detectChanges();
+    });
+
     const id = this.route.snapshot.paramMap.get('id');
 
-    console.log('🔍 [1] Buscando película con ID:', id);
-
     if (!id) {
-      console.error('❌ No se encontró ningún ID en la URL');
       this.cargando = false;
       this.cdr.detectChanges();
       return;
@@ -41,13 +48,18 @@ export class DetallePeliculaComponent implements OnInit {
 
     try {
       this.pelicula = await this.peliculasService.getPeliculaPorId(id);
-      console.log('✅ [2] Película obtenida:', this.pelicula);
     } catch (error) {
-      console.error('❌ [3] Error al cargar el detalle de la película:', error);
+      console.error('❌ Error al cargar el detalle de la película:', error);
     } finally {
-      this.cargando = false; // 👈 2. Garantiza que cargando pase a false
-      console.log('🏁 [4] Estado cargando finalizado');
-      this.cdr.detectChanges(); // 👈 3. Fuerza la actualización de la plantilla
+      this.cargando = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  ngOnDestroy() {
+    // 🔹 Limpiar la suscripción para evitar fugas de memoria
+    if (this.rolSub) {
+      this.rolSub.unsubscribe();
     }
   }
 
@@ -99,12 +111,11 @@ export class DetallePeliculaComponent implements OnInit {
 
   irAFunciones(): void {
     if (this.pelicula && this.pelicula.id) {
-      // Navega a la ruta: /peliculas/123/funciones
       this.router.navigate(['/peliculas', this.pelicula.id, 'funciones']);
     }
   }
 
   volver() {
-    this.router.navigate(['/cartelera']); // O ['/cartelera'] según tu nombre de ruta
+    this.router.navigate(['/cartelera']);
   }
 }

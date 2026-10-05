@@ -238,17 +238,28 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
     return asiento.estado === 'comprado' || asiento.usuario_id !== this.usuarioId;
   }
 
+  /**
+   * Confirma la compra global de todos los asientos seleccionados bajo un único código de orden
+   */
+  /**
+   * Redirige al usuario a la pantalla de resumen y pago (Checkout)
+   */
   async procederAlPago(): Promise<void> {
     if (this.misAsientosSeleccionados.length === 0) return;
 
-    try {
-      const ids = this.misAsientosSeleccionados.map((a) => a.id);
-      await this.entradasService.confirmarCompra(ids);
-
-      alert(`¡Compra realizada con éxito! Tus códigos de retiro son generados.`);
-      this.router.navigate(['/cartelera']);
-    } catch (error: any) {
-      alert(`Error al procesar la compra: ${error.message}`);
-    }
+    // Navegamos al checkout pasando el ID de la función actual
+    this.router.navigate(['/checkout', this.funcionId]);
   }
+
+  volverAFunciones(): void {
+  // Verificamos si ya cargó el objeto 'funcion' y tiene la propiedad de la película
+  const peliculaId = this.funcion?.pelicula_id
+
+  if (peliculaId) {
+    this.router.navigate(['/peliculas', peliculaId, 'funciones']);
+  } else {
+    // Si por alguna razón no está disponible, lo mandamos de regreso a la cartelera general
+    this.router.navigate(['/cartelera']);
+  }
+}
 }
