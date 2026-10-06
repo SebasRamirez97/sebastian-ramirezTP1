@@ -14,17 +14,21 @@ import { supabase } from '../../services/supabaseClient';
 })
 export class CheckoutComponent implements OnInit {
   funcionId: string = '';
-  usuarioId: string = '';
+  usuarioId: string | null = null; // Permitimos null para anónimos
   misAsientos: any[] = [];
   cargando: boolean = true;
+  montoIngresadoAnonimo: number = 0;
   
   funcionData: any = {
     precio_pesos: 0,
     precio_puntos: 0
   };
   
-  metodoPago: string = 'efectivo'; // 'efectivo', 'puntos', o 'mixto'
-  creditosAUsar: number = 0; // 👈 Cantidad de créditos que el usuario decide usar en pago mixto
+  metodoPago: string = 'efectivo';
+  creditosAUsar: number = 0;
+
+  // IDs locales si es anónimo
+  private idsAsientosAnonimo: string[] = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -37,7 +41,17 @@ export class CheckoutComponent implements OnInit {
     this.funcionId = this.route.snapshot.paramMap.get('funcionId') || '';
 
     const { data: authData } = await supabase.auth.getUser();
-    this.usuarioId = authData?.user ? authData.user.id : 'usuario-invitado-anonimo';
+    
+    if (authData?.user) {
+      this.usuarioId = authData.user.id;
+    } else {
+      this.usuarioId = null;
+      const anonimoStr = localStorage.getItem('clienteAnonimo');
+      if (anonimoStr) {
+        const anonimo = JSON.parse(anonimoStr);
+        this.idsAsientosAnonimo = anonimo.asientosSeleccionados || [];
+      }
+    }
 
     await this.cargarDatosCheckout();
   }
@@ -75,9 +89,17 @@ export class CheckoutComponent implements OnInit {
       return;
     }
 
-    this.misAsientos = todasLasEntradas.filter(
-      e => e.usuario_id === this.usuarioId && e.estado === 'seleccionado'
-    );
+    if (this.usuarioId) {
+      // Usuario registrado: filtra por su UUID
+      this.misAsientos = todasLasEntradas.filter(
+        e => e.usuario_id === this.usuarioId && e.estado === 'seleccionado'
+      );
+    } else {
+      // Usuario anónimo: filtra por los IDs guardados en el localStorage
+      this.misAsientos = todasLasEntradas.filter(
+        e => this.idsAsientosAnonimo.includes(e.id) && e.estado === 'seleccionado'
+      );
+    }
 
     if (this.misAsientos.length === 0) {
       alert('No tienes asientos seleccionados o tu sesión de selección expiró.');
@@ -97,6 +119,53 @@ export class CheckoutComponent implements OnInit {
 
   async confirmarPagoFinal(): Promise<void> {
     try {
+      if (!this.usuarioId) {
+        if (Number(this.montoIngresadoAnonimo) !== Number(this.totalPagar)) {
+          alert(`El monto ingresado ($${this.montoIngresadoAnonimo}) debe ser exacto al total a pagar ($${this.totalPagar}).`);
+          return;
+        }
+
+        const codigoUnico = await this.entradasService.confirmarCompra(
+          null, 
+          this.misAsientos, 
+          'efectivo'
+        );
+
+        // Limpiamos los asientos del localStorage del anónimo
+        const anonimoStr = localStorage.getItem('clienteAnonimo');
+        if (anonimoStr) {
+          const anonimo = JSON.parse(anonimoStr);
+          anonimo.asientosSeleccionados = [];
+          localStorage.setItem('clienteAnonimo', JSON.stringify(anonimo));
+        }
+
+        alert(`¡Pago exitoso! Tu código de retiro único es: ${codigoUnico}`);
+        this.router.navigate(['/cartelera']);
+        return;
+      }
+
+
+      if (!this.usuarioId) {
+        const codigoUnico = await this.entradasService.confirmarCompra(
+          null, 
+          this.misAsientos, 
+          'efectivo' // o el método que elija
+        );
+
+        // Limpiamos los asientos del localStorage del anónimo tras una compra exitosa
+        const anonimoStr = localStorage.getItem('clienteAnonimo');
+        if (anonimoStr) {
+          const anonimo = JSON.parse(anonimoStr);
+          anonimo.asientosSeleccionados = [];
+          localStorage.setItem('clienteAnonimo', JSON.stringify(anonimo));
+        }
+
+        alert(`¡Pago exitoso! Tu código de retiro único es: ${codigoUnico}`);
+        this.router.navigate(['/cartelera']);
+        return;
+      }
+
+      // --- Flujo normal para usuarios registrados ---
       const { data: clienteData, error: clienteError } = await supabase
         .from('clientes')
         .select('dinero, puntos, creditos')
@@ -126,7 +195,6 @@ export class CheckoutComponent implements OnInit {
           alert(`Puntos insuficientes. Tienes ${puntosActuales} Pts y necesitas ${this.totalPuntos} Pts.`);
           return;
         }
-        // Descontar puntos (si usas puntos no toca el dinero)
         const nuevosPuntos = puntosActuales - this.totalPuntos;
         const { error: updateError } = await supabase
           .from('clientes')
@@ -136,7 +204,6 @@ export class CheckoutComponent implements OnInit {
         if (updateError) throw updateError;
 
       } else if (this.metodoPago === 'mixto') {
-        // Validar que los créditos ingresados no superen los disponibles
         creditosADescontar = Number(this.creditosAUsar || 0);
         
         if (creditosADescontar < 0) {
@@ -154,7 +221,6 @@ export class CheckoutComponent implements OnInit {
           return;
         }
 
-        // El resto se calcula en dinero
         dineroADescontar = this.totalPagar - creditosADescontar;
 
         if (dineroActual < dineroADescontar) {
@@ -162,7 +228,6 @@ export class CheckoutComponent implements OnInit {
           return;
         }
 
-        // Actualizar ambos en la base de datos
         const nuevoDinero = dineroActual - dineroADescontar;
         const nuevosCreditos = creditosActuales - creditosADescontar;
 
@@ -177,7 +242,6 @@ export class CheckoutComponent implements OnInit {
         if (updateError) throw updateError;
       }
 
-      // Si fue pago por efectivo puro, descontamos solo dinero
       if (this.metodoPago === 'efectivo') {
         const nuevoDinero = dineroActual - dineroADescontar;
         const { error: updateError } = await supabase
@@ -205,4 +269,6 @@ export class CheckoutComponent implements OnInit {
   volverSeleccion(): void {
     this.router.navigate(['/seleccionar-asientos', this.funcionId]);
   }
+
+  
 }

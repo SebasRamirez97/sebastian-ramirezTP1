@@ -8,7 +8,7 @@ export class EntradasService {
   constructor() {}
 
   /**
-   * Genera un código aleatorio limpio de 7 letras mayúsculas (Ej: X Y Z W Q R T)
+   * Genera un código aleatorio limpio de 7 letras mayúsculas
    */
   private generarCodigoRetiro(): string {
     const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -32,15 +32,15 @@ export class EntradasService {
   }
 
   /**
-   * Bloquea un asiento inmediatamente al hacer clic (Estado: 'seleccionado')
-   * Nota: Ya no incluimos codigo_retiro aquí porque ahora pertenece a la tabla 'ordenes'
+   * Bloquea un asiento inmediatamente al hacer clic (Acepta string o null para usuarioId)
    */
   async bloquearAsiento(
     funcionId: string,
-    usuarioId: string,
+    usuarioId: string | null,
     fila: string,
     numeroAsiento: number,
   ): Promise<any> {
+    // Quitamos .single() y .select() complejos que causan el conflicto 400
     const { data, error } = await supabase
       .from('entradas')
       .insert([
@@ -51,10 +51,9 @@ export class EntradasService {
           numero_asiento: numeroAsiento,
           estado: 'seleccionado',
           aprobada: false,
-        },
+        }
       ])
-      .select()
-      .single();
+      .select(); // Devolvemos el array insertado sin forzar .single()
 
     if (error) {
       if (error.code === '23505') {
@@ -63,7 +62,8 @@ export class EntradasService {
       throw new Error(`No se pudo seleccionar el asiento: ${error.message}`);
     }
 
-    return data;
+    // Retornamos el primer elemento insertado con éxito
+    return data && data.length > 0 ? data[0] : null;
   }
 
   /**
@@ -78,20 +78,18 @@ export class EntradasService {
   }
 
   /**
-   * Confirma la compra: Consulta los precios (pesos y puntos) de la función, 
-   * calcula el total según el método elegido y genera la orden unificada.
+   * Confirma la compra: Calcula el total y genera la orden unificada.
    */
-  async confirmarCompra(usuarioId: string, asientosSeleccionados: any[], metodoPago: string = 'efectivo'): Promise<string> {
+  async confirmarCompra(usuarioId: string | null, asientosSeleccionados: any[], metodoPago: string = 'efectivo'): Promise<string> {
     if (asientosSeleccionados.length === 0) {
       throw new Error('No hay asientos seleccionados para comprar.');
     }
 
-    // 1. Tomamos el funcion_id del primer asiento para consultar los precios en la BD
     const funcionId = asientosSeleccionados[0].funcion_id;
 
     const { data: funcionData, error: errorFuncion } = await supabase
       .from('funciones')
-      .select('precio_pesos, precio_puntos') // <--- Consultamos ambas columnas
+      .select('precio_pesos, precio_puntos')
       .eq('id', funcionId)
       .single();
 
@@ -99,7 +97,6 @@ export class EntradasService {
       throw new Error('No se pudo obtener la información de precios de la función.');
     }
 
-    // 2. Calculamos el total dependiendo de si paga con pesos o con puntos
     let totalCalculado = 0;
     
     if (metodoPago === 'puntos') {
@@ -110,20 +107,19 @@ export class EntradasService {
       totalCalculado = asientosSeleccionados.length * precioPesosUnitario;
     }
 
-    // 3. Generamos el código único y los IDs de los asientos
     const codigoUnico = this.generarCodigoRetiro();
     const idsAsientos = asientosSeleccionados.map((a) => a.id);
 
-    // 4. Creamos la orden principal en la tabla 'ordenes' guardando el total y el método de pago
+    // Creamos la orden principal permitiendo usuario_id nulo si es anónimo
     const { data: orden, error: errorOrden } = await supabase
       .from('ordenes')
       .insert([
         {
-          usuario_id: usuarioId,
+          usuario_id: usuarioId, // Puede ser null para invitados
           codigo_retiro: codigoUnico,
           estado: 'pagado',
           total: totalCalculado,
-          metodo_pago: metodoPago // 'efectivo'/'pesos' o 'puntos'
+          metodo_pago: metodoPago
         },
       ])
       .select()
@@ -131,7 +127,6 @@ export class EntradasService {
 
     if (errorOrden) throw new Error(`Error al generar la orden: ${errorOrden.message}`);
 
-    // 5. Actualizamos los asientos vinculándolos a esta orden y pasándolos a 'comprado'
     const { error: errorEntradas } = await supabase
       .from('entradas')
       .update({

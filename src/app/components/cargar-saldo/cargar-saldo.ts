@@ -26,40 +26,54 @@ export class CargarSaldoComponent {
     try {
       this.cargando = true;
 
-      // 1. Obtener el usuario autenticado
+      // 1. Intentar ver si hay un usuario autenticado en Supabase
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        alert('Debes iniciar sesión para recargar saldo.');
-        return;
-      }
 
-      // 2. Consultar el saldo actual del cliente para sumarle el nuevo monto
-      const { data: clienteData, error: fetchError } = await supabase
-        .from('clientes')
-        .select('dinero')
-        .eq('id', user.id)
-        .single();
+      if (!authError && user) {
+        // --- FLOGUEO PARA USUARIO REGISTRADO (SUPABASE) ---
+        const { data: clienteData, error: fetchError } = await supabase
+          .from('clientes')
+          .select('dinero')
+          .eq('id', user.id)
+          .single();
 
-      if (fetchError) {
-        throw new Error('No se pudo obtener la información actual del cliente.');
-      }
+        if (fetchError) {
+          throw new Error('No se pudo obtener la información actual del cliente.');
+        }
 
-      const dineroActual = clienteData?.dinero || 0;
-      const nuevoDinero = Number(dineroActual) + Number(this.montoACargar);
+        const dineroActual = clienteData?.dinero || 0;
+        const nuevoDinero = Number(dineroActual) + Number(this.montoACargar);
 
-      // 3. Actualizar la base de datos con el nuevo saldo
-      const { error: updateError } = await supabase
-        .from('clientes')
-        .update({ dinero: nuevoDinero })
-        .eq('id', user.id);
+        const { error: updateError } = await supabase
+          .from('clientes')
+          .update({ dinero: nuevoDinero })
+          .eq('id', user.id);
 
-      if (updateError) {
-        throw updateError;
+        if (updateError) throw updateError;
+
+      } else {
+        // --- FLUJO PARA USUARIO ANÓNIMO (LOCALSTORAGE) ---
+        const anonimoStr = localStorage.getItem('clienteAnonimo');
+        
+        if (!anonimoStr) {
+          alert('No se encontró una sesión activa ni de usuario ni de invitado.');
+          this.router.navigate(['/']); // Redirigir al inicio o login si no hay nada
+          return;
+        }
+
+        const clienteAnonimo = JSON.parse(anonimoStr);
+        
+        // Sumar al saldo local (inicializándolo en 0 si no existía)
+        const saldoActual = clienteAnonimo.dinero || 0;
+        clienteAnonimo.dinero = Number(saldoActual) + Number(this.montoACargar);
+
+        // Guardar de nuevo en el localStorage
+        localStorage.setItem('clienteAnonimo', JSON.stringify(clienteAnonimo));
       }
 
       alert(`¡Recarga exitosa! Se han acreditado $${this.montoACargar} a tu cuenta.`);
       
-      // Redirigir de vuelta al estado del cliente o cartelera
+      // Redirigir de vuelta al estado del cliente, cartelera o selección de asientos
       this.router.navigate(['/estado-cliente']);
 
     } catch (error: any) {

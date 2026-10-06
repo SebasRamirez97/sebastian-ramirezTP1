@@ -16,31 +16,37 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
   funcionId: string = '';
   funcion: any = null;
 
-  filas: string[] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J-K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T'];
+  filas: string[] = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J-K',
+    'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+  ];
 
-  obtenerBloquesFila(fila: string): { izquierda: number[], centro: number[], derecha: number[] } {
+  obtenerBloquesFila(fila: string): { izquierda: number[]; centro: number[]; derecha: number[] } {
     if (fila === 'J-K') {
       return {
         izquierda: [1, 2],
         centro: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-        derecha: [13, 14]
+        derecha: [13, 14],
       };
     } else {
       return {
         izquierda: [1, 2, 3, 4],
         centro: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
-        derecha: [25, 26, 27, 28]
+        derecha: [25, 26, 27, 28],
       };
     }
   }
 
   asientosOcupados: Map<string, any> = new Map();
   misAsientosSeleccionados: any[] = [];
-  
+
+  // IDs de asientos guardados localmente si es anónimo
+  private idsAsientosAnonimo: string[] = [];
+
   // 🛡️ Control para evitar doble clic o llamadas concurrentes en el mismo asiento
   private asientosEnProceso: Set<string> = new Set();
 
-  usuarioId: string = '';
+  usuarioId: string | null = null;
   cargando: boolean = true;
   errorMensaje: string | null = null;
   private realtimeChannel: any;
@@ -59,10 +65,18 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
     const {
       data: { user },
     } = await supabase.auth.getUser();
+
     if (user) {
       this.usuarioId = user.id;
     } else {
-      this.usuarioId = 'usuario-invitado-anonimo';
+      const anonimoStr = localStorage.getItem('clienteAnonimo');
+      if (anonimoStr) {
+        this.usuarioId = null;
+        const anonimo = JSON.parse(anonimoStr);
+        this.idsAsientosAnonimo = anonimo.asientosSeleccionados || [];
+      } else {
+        this.usuarioId = null;
+      }
     }
 
     if (this.funcionId) {
@@ -98,7 +112,13 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
         const key = `${e.fila}-${e.numero_asiento}`;
         this.asientosOcupados.set(key, e);
 
-        if (e.usuario_id === this.usuarioId && e.estado === 'seleccionado') {
+        // Permitimos que reconozca como propio si es el usuario ID, sin importar si está seleccionado o ya comprado
+        const esMio = this.usuarioId 
+          ? (e.usuario_id === this.usuarioId && (e.estado === 'seleccionado' || e.estado === 'comprado'))
+          : (this.idsAsientosAnonimo.includes(e.id) && (e.estado === 'seleccionado' || e.estado === 'comprado'));
+
+        if (esMio && e.estado === 'seleccionado') {
+          // Solo los ponemos en el carrito de pago si siguen en estado 'seleccionado'
           this.misAsientosSeleccionados.push(e);
         }
       });
@@ -160,32 +180,40 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Maneja la selección y deselección instantánea de un asiento al primer clic
-   */
   async seleccionarAsiento(fila: string, numero: number): Promise<void> {
     const key = `${fila}-${numero}`;
 
-    // Si este asiento ya está siendo procesado en este milisegundo, ignoramos para evitar duplicidad
     if (this.asientosEnProceso.has(key)) return;
     this.asientosEnProceso.add(key);
 
     const asientoExistente = this.asientosOcupados.get(key);
 
     try {
+      const esMioExistente = this.usuarioId 
+        ? (asientoExistente?.usuario_id === this.usuarioId)
+        : (this.idsAsientosAnonimo.includes(asientoExistente?.id));
+
       if (asientoExistente) {
-        // Si ya existe y es mío, lo DESELECCIONAMOS (liberamos)
-        if (asientoExistente.usuario_id === this.usuarioId && asientoExistente.estado === 'seleccionado') {
+        if (esMioExistente && asientoExistente.estado === 'seleccionado') {
           await this.entradasService.liberarAsiento(asientoExistente.id);
           this.asientosOcupados.delete(key);
-          this.misAsientosSeleccionados = this.misAsientosSeleccionados.filter(a => a.id !== asientoExistente.id);
+          this.misAsientosSeleccionados = this.misAsientosSeleccionados.filter(
+            (a) => a.id !== asientoExistente.id,
+          );
+
+          // Si es anónimo, lo removemos del localStorage
+          if (!this.usuarioId) {
+            this.idsAsientosAnonimo = this.idsAsientosAnonimo.filter(id => id !== asientoExistente.id);
+            this.actualizarLocalStorageAnonimo();
+          }
         } else {
           alert('Este asiento ya no está disponible.');
         }
       } else {
-        // Validar límite de cantidad antes de seleccionar uno nuevo
         if (this.misAsientosSeleccionados.length >= this.cantidadPermitida) {
-          alert(`Solo puedes seleccionar un máximo de ${this.cantidadPermitida} entrada(s) según tu selección actual. Aumenta la cantidad si deseas más.`);
+          alert(
+            `Solo puedes seleccionar un máximo de ${this.cantidadPermitida} entrada(s) según tu selección actual.`,
+          );
           this.asientosEnProceso.delete(key);
           return;
         }
@@ -194,23 +222,36 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
           this.funcionId,
           this.usuarioId,
           fila,
-          numero
+          numero,
         );
-        
+
         this.asientosOcupados.set(key, nuevaEntrada);
         this.misAsientosSeleccionados.push(nuevaEntrada);
+
+        // Si es anónimo, guardamos el ID en su localStorage
+        if (!this.usuarioId) {
+          this.idsAsientosAnonimo.push(nuevaEntrada.id);
+          this.actualizarLocalStorageAnonimo();
+        }
       }
-      
-      // Refresco inmediato de la vista
+
       this.cdr.markForCheck();
       this.cdr.detectChanges();
-      
     } catch (error: any) {
       alert(error.message);
       await this.cargarAsientosActuales();
     } finally {
-      // Liberamos el semáforo del asiento
       this.asientosEnProceso.delete(key);
+      this.cdr.detectChanges(); // Forzamos la actualización visual de inmediato al terminar
+    }
+  }
+
+  private actualizarLocalStorageAnonimo(): void {
+    const anonimoStr = localStorage.getItem('clienteAnonimo');
+    if (anonimoStr) {
+      const anonimo = JSON.parse(anonimoStr);
+      anonimo.asientosSeleccionados = this.idsAsientosAnonimo;
+      localStorage.setItem('clienteAnonimo', JSON.stringify(anonimo));
     }
   }
 
@@ -218,16 +259,35 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
     const key = `${fila}-${numero}`;
     const asiento = this.asientosOcupados.get(key);
 
-    const esLibre = !asiento;
-    const esMio = asiento && asiento.usuario_id === this.usuarioId && asiento.estado === 'seleccionado';
-    const esComprado = asiento && asiento.estado === 'comprado';
-    const esOcupadoPorOtro = asiento && !esMio && !esComprado;
+    if (!asiento) {
+      return {
+        'asiento-libre': true,
+        'asiento-mio': false,
+        'asiento-mio-comprado': false,
+        'asiento-ocupado': false
+      };
+    }
+
+    const esMio = this.usuarioId 
+      ? (asiento.usuario_id === this.usuarioId)
+      : (this.idsAsientosAnonimo.includes(asiento.id));
+
+    // 1. Seleccionado actualmente por ti (en verde)
+    const esMioSeleccionado = esMio && asiento.estado === 'seleccionado';
+
+    // 2. Comprado por ti previamente (cuarto estado - azul)
+    const esMioComprado = esMio && asiento.estado === 'comprado';
+
+    // 3. Ocupado por otra persona (comprado o seleccionado por otro)
+    const ocupadoPorOtro = !esMio && (asiento.estado === 'comprado' || asiento.estado === 'seleccionado');
+
+    const esLibre = !esMioSeleccionado && !esMioComprado && !ocupadoPorOtro;
 
     return {
       'asiento-libre': esLibre,
-      'asiento-mio': esMio,
-      'asiento-comprado': esComprado,
-      'asiento-ocupado': esOcupadoPorOtro
+      'asiento-mio': esMioSeleccionado,
+      'asiento-mio-comprado': esMioComprado,
+      'asiento-ocupado': ocupadoPorOtro,
     };
   }
 
@@ -235,31 +295,30 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
     const key = `${fila}-${numero}`;
     const asiento = this.asientosOcupados.get(key);
     if (!asiento) return false;
-    return asiento.estado === 'comprado' || asiento.usuario_id !== this.usuarioId;
+
+    const esMio = this.usuarioId 
+      ? (asiento.usuario_id === this.usuarioId)
+      : (this.idsAsientosAnonimo.includes(asiento.id));
+
+    // Se deshabilita si ya está comprado, o si está seleccionado por otra persona
+    return asiento.estado === 'comprado' || (!esMio && asiento.estado === 'seleccionado');
   }
 
-  /**
-   * Confirma la compra global de todos los asientos seleccionados bajo un único código de orden
-   */
-  /**
-   * Redirige al usuario a la pantalla de resumen y pago (Checkout)
-   */
   async procederAlPago(): Promise<void> {
-    if (this.misAsientosSeleccionados.length === 0) return;
+    if (this.misAsientosSeleccionados.length === 0) {
+      alert('No tienes asientos seleccionados.');
+      return;
+    }
 
-    // Navegamos al checkout pasando el ID de la función actual
     this.router.navigate(['/checkout', this.funcionId]);
   }
 
   volverAFunciones(): void {
-  // Verificamos si ya cargó el objeto 'funcion' y tiene la propiedad de la película
-  const peliculaId = this.funcion?.pelicula_id
-
-  if (peliculaId) {
-    this.router.navigate(['/peliculas', peliculaId, 'funciones']);
-  } else {
-    // Si por alguna razón no está disponible, lo mandamos de regreso a la cartelera general
-    this.router.navigate(['/cartelera']);
+    const peliculaId = this.funcion?.pelicula_id;
+    if (peliculaId) {
+      this.router.navigate(['/peliculas', peliculaId, 'funciones']);
+    } else {
+      this.router.navigate(['/cartelera']);
+    }
   }
-}
 }

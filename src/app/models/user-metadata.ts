@@ -26,6 +26,7 @@ export interface AdminMetadata {
 }
 
 export interface AnonimoMetadata {
-  rol: 'anonimo';
-  nombre?: string;
+  nombre: string;
+  rol: string;
+  asientosSeleccionados?: string[];
 }

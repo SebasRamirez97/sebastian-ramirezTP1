@@ -1,9 +1,7 @@
 <div class="asientos-container">
   <!-- Cabecera con título y botón de regreso -->
   <div class="header-asientos">
-    <button class="btn btn-secundario" (click)="volverAFunciones()">
-      ⬅ Volver a Funciones
-    </button>
+    <button class="btn btn-secundario" (click)="volverAFunciones()">⬅ Volver a Funciones</button>
     <h2>🎟️ Selecciona tus Asientos</h2>
   </div>
 
@@ -32,22 +30,27 @@
     <!-- Cuadrícula de Asientos con Distribución de Pasillos y Bloques -->
     <div class="sala-grid">
       @for (fila of filas; track fila) {
-        <div class="fila-container" [ngClass]="{'fila-discapacitados': fila === 'J-K', 'fila-vip': fila === 'R' || fila === 'S' || fila === 'T'}">
-          
+        <div
+          class="fila-container"
+          [ngClass]="{
+            'fila-discapacitados': fila === 'J-K',
+            'fila-vip': fila === 'R' || fila === 'S' || fila === 'T',
+          }"
+        >
           <span class="letra-fila">{{ fila }}</span>
-          
+
           <!-- Contenedor de los 3 bloques de la fila -->
           <div class="bloques-asientos">
-            
             <!-- Bloque Izquierdo -->
             <div class="bloque columna-izquierda">
               @for (num of obtenerBloquesFila(fila).izquierda; track num) {
-                <button 
+                <button
                   class="btn-asiento"
                   [ngClass]="obtenerObjetoClases(fila, num)"
                   [disabled]="isAsientoDeshabilitado(fila, num)"
                   (click)="seleccionarAsiento(fila, num)"
-                  title="Fila {{ fila }} Asiento {{ num }}">
+                  title="Fila {{ fila }} Asiento {{ num }}"
+                >
                   {{ num }}
                 </button>
               }
@@ -58,12 +61,13 @@
             <!-- Bloque Central -->
             <div class="bloque columna-centro">
               @for (num of obtenerBloquesFila(fila).centro; track num) {
-                <button 
+                <button
                   class="btn-asiento"
                   [ngClass]="obtenerObjetoClases(fila, num)"
                   [disabled]="isAsientoDeshabilitado(fila, num)"
                   (click)="seleccionarAsiento(fila, num)"
-                  title="Fila {{ fila }} Asiento {{ num }}">
+                  title="Fila {{ fila }} Asiento {{ num }}"
+                >
                   {{ num }}
                 </button>
               }
@@ -74,17 +78,17 @@
             <!-- Bloque Derecho -->
             <div class="bloque columna-derecha">
               @for (num of obtenerBloquesFila(fila).derecha; track num) {
-                <button 
+                <button
                   class="btn-asiento"
                   [ngClass]="obtenerObjetoClases(fila, num)"
                   [disabled]="isAsientoDeshabilitado(fila, num)"
                   (click)="seleccionarAsiento(fila, num)"
-                  title="Fila {{ fila }} Asiento {{ num }}">
+                  title="Fila {{ fila }} Asiento {{ num }}"
+                >
                   {{ num }}
                 </button>
               }
             </div>
-
           </div>
         </div>
       }
@@ -93,19 +97,20 @@
     <!-- Leyenda de Colores -->
     <div class="leyenda">
       <div class="item-leyenda"><span class="cuadrito-asiento-libre"></span> Libre</div>
-      <div class="item-leyenda"><span class="cuadrito-asiento-mio"></span> Seleccionado por ti</div>
+      <div class="item-leyenda"><span class="cuadrito-asiento-mio"></span> Seleccion</div>
+      <div class="item-leyenda"><span class="cuadrito-asiento-mio-comprado"></span> Mis Asientos</div>
       <div class="item-leyenda"><span class="cuadrito-asiento-ocupado"></span> Ocupado</div>
     </div>
 
     <!-- Resumen y Botón de Pago -->
     <div class="resumen-compra">
       <h3>Asientos elegidos: {{ misAsientosSeleccionados.length }}</h3>
-      
+
       @if (misAsientosSeleccionados.length > 0) {
         <div class="lista-seleccionados-grupo">
           <!-- Mostramos las coordenadas de todos los asientos juntos -->
           <p class="coordenadas-texto">
-            <strong>Butacas:</strong> 
+            <strong>Butacas:</strong>
             @for (asiento of misAsientosSeleccionados; track asiento.id; let last = $last) {
               {{ asiento.fila }}-{{ asiento.numero_asiento }}{{ !last ? ', ' : '' }}
             }
