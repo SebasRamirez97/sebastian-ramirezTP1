@@ -1,16 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { VerificarEntradaComponent } from './verificar-entrada.component';
+import { VerificarOrdenComponent } from './verificar-orden.component';
 
 describe('VerificarEntrada', () => {
-  let component: VerificarEntradaComponent;
-  let fixture: ComponentFixture<VerificarEntradaComponent>;
+  let component: VerificarOrdenComponent;
+  let fixture: ComponentFixture<VerificarOrdenComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [VerificarEntradaComponent],
+      imports: [VerificarOrdenComponent],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(VerificarEntradaComponent);
+    fixture = TestBed.createComponent(VerificarOrdenComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

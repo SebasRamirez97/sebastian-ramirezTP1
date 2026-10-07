@@ -1,0 +1,41 @@
+<div class="verificar-container">
+  <div class="card-verificacion">
+    <h2>🎫 Verificación y Canje de Órdenes</h2>
+    <p>Ingrese el código de retiro proporcionado por el cliente para aprobar la entrega de entradas o productos.</p>
+
+    <div class="input-grupo">
+      <input 
+        type="text" 
+        [(ngModel)]="codigoRetiro" 
+        placeholder="Ej: A3F9B2" 
+        maxlength="10"
+        (keyup.enter)="verificarOrden()"
+      />
+      <button (click)="verificarOrden()" [disabled]="cargando">
+        {{ cargando ? 'Verificando...' : 'Aprobar Orden' }}
+      </button>
+    </div>
+
+    <!-- Mensajes de Error -->
+    @if (mensajeError) {
+      <div class="alerta error">
+        ❌ {{ mensajeError }}
+      </div>
+    }
+
+    <!-- Mensajes de Éxito -->
+    @if (mensajeExito) {
+      <div class="alerta exito">
+        ✅ {{ mensajeExito }}
+        @if (ordenDetalle) {
+          <div class="detalle-orden">
+            <p><strong>ID de Orden:</strong> {{ ordenDetalle.id }}</p>
+            <p><strong>Método de Pago:</strong> {{ ordenDetalle.metodo_pago }}</p>
+            <p><strong>Total:</strong> ${{ ordenDetalle.total }}</p>
+            <p><strong>Estado Actual:</strong> <span class="badge aprobado">APROBADO</span></p>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

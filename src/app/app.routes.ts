@@ -17,12 +17,13 @@ import { FuncionesPeliculaComponent } from './components/funciones-pelicula/func
 import { ListaFuncionesComponent } from './components/lista-funciones/lista-funciones';
 import { EditarFuncionComponent } from './components/editar-funcion/editar-funcion';
 
-import { RegistrarEmpleadoComponent } from './components/registrar-empleado/registrar-empleado.componet';
+//Para Empleados
+import { RegistrarEmpleadoComponent } from './components/registrar-empleado/registrar-empleado.component';
 
 //Para compras de entrada
 import { SeleccionarAsientosComponent } from './components/seleccionar-asientos/seleccionar-asientos';
 import { CheckoutComponent } from './components/checkout/checkout';
-import { VerificarEntradaComponent } from './components/verificar-entrada/verificar-entrada.component'; //proximamente
+import { VerificarOrdenComponent } from './components/verificar-orden/verificar-orden.component'; //proximamente
 
 //Para Cliente
 import { EstadoClienteComponent } from './components/estado-cliente/estado-cliente';
@@ -71,7 +72,7 @@ export const routes: Routes = [
   { path: 'registrar-empleado', component: RegistrarEmpleadoComponent, canActivate: [adminGuard] },
 
   // 🍿 Empleado
-  { path: 'verificar-entrada', component: VerificarEntradaComponent, canActivate: [empleadoGuard] },
+  { path: 'verificar-orden', component: VerificarOrdenComponent, canActivate: [empleadoGuard] },
 
   // 👤 Cliente
   { path: 'cliente-area', component: HomeComponent, canActivate: [clienteGuard] },

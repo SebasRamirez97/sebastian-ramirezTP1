@@ -102,7 +102,7 @@
       <div class="item-leyenda"><span class="cuadrito-asiento-ocupado"></span> Ocupado</div>
     </div>
 
-    <!-- Resumen y Botón de Pago -->
+    <!-- Resumen y Botón de Pago / Candy Bar -->
     <div class="resumen-compra">
       <h3>Asientos elegidos: {{ misAsientosSeleccionados.length }}</h3>
 
@@ -117,9 +117,17 @@
           </p>
         </div>
 
-        <button class="btn btn-primary btn-pagar" (click)="procederAlPago()">
-          Ir a Pagar / Resumen 🛒
-        </button>
+        <div class="botones-acciones-compra" style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+          <!-- Botón para ir al Candy Bar -->
+          <button class="btn btn-secundario" (click)="irAlCandyBar()">
+            🍿 Agregar Snacks (Candy Bar)
+          </button>
+
+          <!-- Botón de pago directo habitual -->
+          <button class="btn btn-primary btn-pagar" (click)="procederAlPago()">
+            Ir a Pagar / Resumen 🛒
+          </button>
+        </div>
       }
     </div>
   }

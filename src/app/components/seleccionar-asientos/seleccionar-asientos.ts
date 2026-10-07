@@ -21,6 +21,8 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
     'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
   ];
 
+  asientosSeleccionados: any[] = [];
+
   obtenerBloquesFila(fila: string): { izquierda: number[]; centro: number[]; derecha: number[] } {
     if (fila === 'J-K') {
       return {
@@ -320,5 +322,17 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
     } else {
       this.router.navigate(['/cartelera']);
     }
+  }
+  irAlCandyBar() {
+    if (this.asientosSeleccionados.length === 0) {
+      alert('Por favor, selecciona al menos un asiento antes de ir al Candy Bar.');
+      return;
+    }
+
+    // Guardamos los asientos temporalmente en localStorage para recuperarlos en el Candy Bar / Checkout
+    localStorage.setItem('asientosSeleccionados', JSON.stringify(this.asientosSeleccionados));
+
+    // Redirigimos a la ruta de tu Candy Bar (ajusta la ruta según tu app, ej: '/candy' o '/candyshop')
+    this.router.navigate(['/candy']);
   }
 }
