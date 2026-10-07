@@ -142,14 +142,15 @@ export class EntradasService {
 
   async confirmarCompraConCandy(
     usuarioId: string | null,
-    asientos: any[] = [], // 👈 Ahora puede venir vacío si es solo candy
+    asientos: any[] = [], 
     metodoPago: string,
     itemsCandyJson: any[] = [],
-    itemsConIdsFisicos: any[] = []
+    itemsConIdsFisicos: any[] = [],
+    totalGeneral: number = 0 // 👈 Recibimos el total sumado de entradas + candy
   ): Promise<string> {
     const codigoRetiro = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-    // 1. Creamos la orden principal (siempre se crea, tenga o no entradas)
+    // 1. Creamos la orden principal guardando el total correcto en la columna correspondiente
     const { data: ordenCreada, error: errorOrden } = await supabase
       .from('ordenes')
       .insert([
@@ -158,6 +159,7 @@ export class EntradasService {
           codigo_retiro: codigoRetiro,
           metodo_pago: metodoPago,
           estado: 'pagado',
+          total: totalGeneral, // 👈 Aquí se guarda la suma total de dinero
           items_candy: itemsCandyJson.length > 0 ? itemsCandyJson : null
         }
       ])
@@ -166,7 +168,7 @@ export class EntradasService {
 
     if (errorOrden) throw errorOrden;
 
-    // 2. 🎟️ Solo si hay asientos seleccionados, los actualizamos y vinculamos
+    // 2. 🎟️ Actualizamos entradas de cine
     if (asientos && asientos.length > 0) {
       const idsAsientos = asientos.map(a => a.id);
       const { error: errorAsientos } = await supabase
@@ -177,7 +179,7 @@ export class EntradasService {
       if (errorAsientos) throw errorAsientos;
     }
 
-    // 3. 🍿 Si hay productos del Candy Bar, reservamos los IDs físicos y los vinculamos
+    // 3. 🍿 Reservamos productos del Candy Bar físicos
     const idsFisicosAreservar: string[] = [];
     itemsConIdsFisicos.forEach(item => {
       if (item.idsFisicos) {
@@ -227,7 +229,7 @@ async verificarYAprobarOrden(codigoRetiro: string): Promise<any> {
       throw new Error(`Error al aprobar la orden: ${errorUpdateOrden.message}`);
     }
 
-    // 3. Actualizar el estado de las entradas asociadas (si las tiene)
+    // 3. Actualizar el estado de las entradas asociadas (si las tiene) a 'retirado'
     const { error: errorEntradas } = await supabase
       .from('entradas')
       .update({ estado: 'retirado' })
@@ -237,21 +239,29 @@ async verificarYAprobarOrden(codigoRetiro: string): Promise<any> {
       console.error('Nota: La orden puede no contener entradas de cine.', errorEntradas.message);
     }
 
-    // 4. Actualizar el estado en la tabla 'productos' si la orden contiene items de Candy Bar
+    // 4. 🍿 Actualizar el estado en la tabla 'productos' de 'comprado' a 'retirado'
+    // Opción A: Actualizar directamente todos los productos físicos vinculados a esta orden_id (más seguro y directo)
+    const { error: errorProdOrden } = await supabase
+      .from('productos')
+      .update({ estado: 'retirado' })
+      .eq('orden_id', orden.id)
+      .eq('estado', 'comprado'); // Solo los que estaban comprados
+
+    if (errorProdOrden) {
+      console.error('Error al actualizar los productos de la orden:', errorProdOrden.message);
+    }
+
+    // Opción B (Respaldada por si usas items_candy en JSON): Recorrer los items por ID por si acaso
     if (orden.items_candy && Array.isArray(orden.items_candy) && orden.items_candy.length > 0) {
       for (const item of orden.items_candy) {
-        // Asegúrate de que 'item.id' o 'item.producto_id' coincida con el identificador con el que guardaste el producto
         const productoId = item.id || item.producto_id;
 
         if (productoId) {
-          const { error: errorProd } = await supabase
+          await supabase
             .from('productos')
-            .update({ estado: 'retirado' }) // Cambia el estado del producto a retirado/entregado
-            .eq('id', productoId);
-
-          if (errorProd) {
-            console.error(`Error al actualizar el producto con ID ${productoId}:`, errorProd.message);
-          }
+            .update({ estado: 'retirado' })
+            .eq('id', productoId)
+            .eq('estado', 'comprado');
         }
       }
     }

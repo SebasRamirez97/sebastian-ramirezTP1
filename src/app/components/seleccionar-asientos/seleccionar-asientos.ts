@@ -114,14 +114,15 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
         const key = `${e.fila}-${e.numero_asiento}`;
         this.asientosOcupados.set(key, e);
 
-        // Permitimos que reconozca como propio si es el usuario ID, sin importar si está seleccionado o ya comprado
         const esMio = this.usuarioId 
-          ? (e.usuario_id === this.usuarioId && (e.estado === 'seleccionado' || e.estado === 'comprado'))
-          : (this.idsAsientosAnonimo.includes(e.id) && (e.estado === 'seleccionado' || e.estado === 'comprado'));
+          ? (e.usuario_id === this.usuarioId)
+          : (this.idsAsientosAnonimo.includes(e.id));
 
-        if (esMio && e.estado === 'seleccionado') {
-          // Solo los ponemos en el carrito de pago si siguen en estado 'seleccionado'
-          this.misAsientosSeleccionados.push(e);
+        // Si ya fue comprado, ocupado o retirado, lo consideramos tuyo/ocupado
+        if (esMio && (e.estado === 'seleccionado' || e.estado === 'comprado' || e.estado === 'ocupado' || e.estado === 'retirado')) {
+          if (e.estado === 'seleccionado') {
+            this.misAsientosSeleccionados.push(e);
+          }
         }
       });
     } catch (error: any) {
@@ -203,7 +204,6 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
             (a) => a.id !== asientoExistente.id,
           );
 
-          // Si es anónimo, lo removemos del localStorage
           if (!this.usuarioId) {
             this.idsAsientosAnonimo = this.idsAsientosAnonimo.filter(id => id !== asientoExistente.id);
             this.actualizarLocalStorageAnonimo();
@@ -230,7 +230,6 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
         this.asientosOcupados.set(key, nuevaEntrada);
         this.misAsientosSeleccionados.push(nuevaEntrada);
 
-        // Si es anónimo, guardamos el ID en su localStorage
         if (!this.usuarioId) {
           this.idsAsientosAnonimo.push(nuevaEntrada.id);
           this.actualizarLocalStorageAnonimo();
@@ -244,7 +243,7 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
       await this.cargarAsientosActuales();
     } finally {
       this.asientosEnProceso.delete(key);
-      this.cdr.detectChanges(); // Forzamos la actualización visual de inmediato al terminar
+      this.cdr.detectChanges();
     }
   }
 
@@ -274,15 +273,11 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
       ? (asiento.usuario_id === this.usuarioId)
       : (this.idsAsientosAnonimo.includes(asiento.id));
 
-    // 1. Seleccionado actualmente por ti (en verde)
     const esMioSeleccionado = esMio && asiento.estado === 'seleccionado';
-
-    // 2. Comprado por ti previamente (cuarto estado - azul)
-    const esMioComprado = esMio && asiento.estado === 'comprado';
-
-    // 3. Ocupado por otra persona (comprado o seleccionado por otro)
-    const ocupadoPorOtro = !esMio && (asiento.estado === 'comprado' || asiento.estado === 'seleccionado');
-
+    // Consideramos comprado o retirado como tuyo si coincide tu usuario
+    const esMioComprado = esMio && (asiento.estado === 'comprado' || asiento.estado === 'ocupado' || asiento.estado === 'retirado');
+    
+    const ocupadoPorOtro = !esMio && (asiento.estado === 'comprado' || asiento.estado === 'seleccionado' || asiento.estado === 'ocupado' || asiento.estado === 'retirado');
     const esLibre = !esMioSeleccionado && !esMioComprado && !ocupadoPorOtro;
 
     return {
@@ -302,8 +297,10 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
       ? (asiento.usuario_id === this.usuarioId)
       : (this.idsAsientosAnonimo.includes(asiento.id));
 
-    // Se deshabilita si ya está comprado, o si está seleccionado por otra persona
-    return asiento.estado === 'comprado' || (!esMio && asiento.estado === 'seleccionado');
+    return asiento.estado === 'comprado' || 
+           asiento.estado === 'ocupado' || 
+           asiento.estado === 'retirado' || 
+           (!esMio && asiento.estado === 'seleccionado');
   }
 
   async procederAlPago(): Promise<void> {
@@ -323,16 +320,17 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
       this.router.navigate(['/cartelera']);
     }
   }
-  irAlCandyBar() {
-    if (this.asientosSeleccionados.length === 0) {
+
+  irAlCandyBar(): void {
+    if (this.misAsientosSeleccionados.length === 0) {
       alert('Por favor, selecciona al menos un asiento antes de ir al Candy Bar.');
       return;
     }
 
-    // Guardamos los asientos temporalmente en localStorage para recuperarlos en el Candy Bar / Checkout
-    localStorage.setItem('asientosSeleccionados', JSON.stringify(this.asientosSeleccionados));
+    // Guardamos los asientos seleccionados reales en localStorage para que el Candy Bar / Checkout los recupere
+    localStorage.setItem('asientosSeleccionados', JSON.stringify(this.misAsientosSeleccionados));
 
-    // Redirigimos a la ruta de tu Candy Bar (ajusta la ruta según tu app, ej: '/candy' o '/candyshop')
-    this.router.navigate(['/candy']);
+    // Redirigimos a la ruta configurada en tus rutas de Angular
+    this.router.navigate(['/candybar']);
   }
 }
