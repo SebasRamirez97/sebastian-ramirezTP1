@@ -1,0 +1,80 @@
+<h2>Panel Admin - Crear Producto de Candy Bar</h2>
+
+<form [formGroup]="formProducto" (ngSubmit)="guardarProducto()">
+  <!-- Nombre -->
+  <div>
+    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Nombre del producto:</label>
+    <input formControlName="nombre" placeholder="Ej: Coca Cola 500ml">
+    @if (submitted && formProducto.get('nombre')?.invalid) {
+      <div class="error">
+        @if (formProducto.get('nombre')?.hasError('required')) {
+          Campo obligatorio incompleto
+        } @else if (formProducto.get('nombre')?.hasError('minlength')) {
+          Debe tener al menos 2 caracteres
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Categoría -->
+  <div>
+    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Categoría:</label>
+    <select formControlName="categoria" style="width: 100%; max-width: 400px; padding: 8px 12px; box-sizing: border-box;">
+      <option value="" disabled selected>Selecciona una categoría</option>
+      @for (cat of categorias; track cat) {
+        <option [value]="cat">{{ cat | titlecase }}</option>
+      }
+    </select>
+    @if (submitted && formProducto.get('categoria')?.invalid) {
+      <div class="error">
+        Debes seleccionar una categoría
+      </div>
+    }
+  </div>
+
+  <!-- Precio en Dinero -->
+  <div>
+    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Precio en dinero ($):</label>
+    <input formControlName="precio_dinero" type="number" placeholder="0.00">
+    @if (submitted && formProducto.get('precio_dinero')?.invalid) {
+      <div class="error">
+        Campo obligatorio (mínimo 0)
+      </div>
+    }
+  </div>
+
+  <!-- Precio en Puntos -->
+  <div>
+    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Precio en puntos:</label>
+    <input formControlName="precio_puntos" type="number" placeholder="0">
+    @if (submitted && formProducto.get('precio_puntos')?.invalid) {
+      <div class="error">
+        Campo obligatorio (mínimo 0)
+      </div>
+    }
+  </div>
+
+  <!-- Stock Inicial -->
+  <div>
+    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Stock Inicial (Unidades físicas):</label>
+    <input formControlName="stock_inicial" type="number" min="1" placeholder="1">
+    @if (submitted && formProducto.get('stock_inicial')?.invalid) {
+      <div class="error">
+        Debe ingresar al menos 1 unidad de stock inicial
+      </div>
+    }
+  </div>
+
+  <!-- Selección de Imagen (Opcional) -->
+  <div>
+    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Imagen del producto:</label>
+    <input type="file" accept="image/jpeg, image/jpg, image/png" (change)="onFileSelected($event)">
+  </div>
+
+  <div style="margin-top: 20px;">
+    <button type="submit" [disabled]="subiendoImagen">
+      {{ subiendoImagen ? 'Guardando producto...' : 'Guardar Producto' }}
+    </button>
+    <button type="button" (click)="cancelar()" style="margin-left: 10px;">Cancelar</button>
+  </div>
+</form>

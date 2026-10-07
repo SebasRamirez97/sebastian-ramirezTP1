@@ -8,6 +8,9 @@ import { CarteleraComponent } from './components/cartelera/cartelera';
 import { CrearPeliculaComponent } from './components/crear-pelicula/crear-pelicula';
 import { DetallePeliculaComponent } from './components/detalle-pelicula/detalle-pelicula';
 
+//Para CandyBar
+import { CrearProductoComponent } from './components/crear-producto/crear-producto';
+import { CandyBarComponent } from './components/candy-bar/candy-bar'; // (O la ruta donde tengas tu vista de cliente/admin de productos)
 //Para funciones
 import { CrearFuncionComponent } from './components/crear-funcion/crear-funcion';
 import { FuncionesPeliculaComponent } from './components/funciones-pelicula/funciones-pelicula';
@@ -44,6 +47,11 @@ export const routes: Routes = [
   { path: 'armar-cartelera', component: CrearPeliculaComponent, canActivate: [adminGuard] },
   { path: 'peliculas/:id', component: DetallePeliculaComponent, canActivate: [authGuard] },
 
+  // Candy-Bar
+  { path: 'candybar', component: CandyBarComponent, canActivate: [authGuard] },
+  { path: 'crear-producto', component: CrearProductoComponent, canActivate: [adminGuard] },
+ 
+
   // Funciones de una pelicula
   { path: 'peliculas/:id/funciones', component: FuncionesPeliculaComponent, canActivate: [authGuard] },
   { path: 'lista-funciones', component: ListaFuncionesComponent,canActivate: [adminGuard] },
@@ -51,8 +59,9 @@ export const routes: Routes = [
 
   //Para entradas de cine
 
-  { path: 'seleccionar-asientos/:funcionId', component: SeleccionarAsientosComponent },
-  { path: 'checkout/:funcionId', component: CheckoutComponent },
+  { path: 'seleccionar-asientos/:funcionId', component: SeleccionarAsientosComponent, canActivate: [authGuard]},
+  { path: 'checkout/:funcionId', component: CheckoutComponent, canActivate: [authGuard]},
+  {path: 'checkout',  component: CheckoutComponent, canActivate: [authGuard]},   // 👈 Ruta exclusiva para cuando es solo candy bar sin función
 
 
   // 🍿 Funciones de Cine (Admin)

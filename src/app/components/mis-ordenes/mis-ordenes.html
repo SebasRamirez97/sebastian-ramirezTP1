@@ -2,7 +2,7 @@
 
   <div class="header-titulo">
     <h2>🎟️ Mis Compras y Órdenes</h2>
-    <p>Presenta el código QR o el código de retiro en la entrada del cine.</p>
+    <p>Presenta el código QR o el código de retiro en la entrada del cine o del Candy Bar.</p>
   </div>
 
   @if (cargando) {
@@ -20,41 +20,61 @@
           <div class="ticket-card">
             <!-- Sección Superior del Ticket -->
             <div class="ticket-header">
-              <span class="badge-cine">Cine</span>
+              <span class="badge-cine">
+                {{ orden.entradas && orden.entradas.length > 0 ? 'Cine + Candy' : 'Candy Bar' }}
+              </span>
             </div>
 
             <div class="ticket-body">
-              <!-- Tomamos la peli de la primera entrada asociada a la orden -->
-              <h3 class="pelicula-titulo">
-                {{ orden.entradas?.[0]?.funciones?.peliculas?.nombre || 'Película' }}
-              </h3>
+              <!-- Tomamos la peli de la primera entrada asociada o indicamos que es compra de Candy -->
+              @if (orden.entradas && orden.entradas.length > 0) {
+                <h3 class="pelicula-titulo">
+                  {{ orden.entradas?.[0]?.funciones?.peliculas?.nombre || 'Película' }}
+                </h3>
+              } @else {
+                <h3 class="pelicula-titulo">🍿 Compra de Candy Bar</h3>
+              }
 
               <div class="ticket-detalles">
-                <div class="detalle-item">
-                  <span class="label">📅 Fecha</span>
-                  <span class="valor">{{ orden.entradas?.[0]?.funciones?.fecha_inicio | date: 'dd/MM/yyyy' }}</span>
-                </div>
-                <div class="detalle-item">
-                  <span class="label">🕒 Hora</span>
-                  <span class="valor">{{ orden.entradas?.[0]?.funciones?.fecha_inicio | date: 'HH:mm' }} hs</span>
-                </div>
-                <div class="detalle-item full-width">
-                  <span class="label">🏢 Sala / Formato</span>
-                  <span class="valor">
-                    {{ orden.entradas?.[0]?.funciones?.salas?.nombre || 'Sala' }} 
-                    ({{ orden.entradas?.[0]?.funciones?.formato || 'Standard' }})
-                  </span>
-                </div>
-                
-                <!-- NUEVO: Mostramos los asientos comprados en esta orden -->
-                <div class="detalle-item full-width">
-                  <span class="label">💺 Asientos</span>
-                  <div class="asientos-tags">
-                    @for (entrada of orden.entradas; track entrada.id) {
-                      <span class="asiento-chip">F: {{ entrada.fila }} - A: {{ entrada.numero_asiento }}</span>
-                    }
+                @if (orden.entradas && orden.entradas.length > 0) {
+                  <div class="detalle-item">
+                    <span class="label">📅 Fecha</span>
+                    <span class="valor">{{ orden.entradas?.[0]?.funciones?.fecha_inicio | date: 'dd/MM/yyyy' }}</span>
                   </div>
-                </div>
+                  <div class="detalle-item">
+                    <span class="label">🕒 Hora</span>
+                    <span class="valor">{{ orden.entradas?.[0]?.funciones?.fecha_inicio | date: 'HH:mm' }} hs</span>
+                  </div>
+                  <div class="detalle-item full-width">
+                    <span class="label">🏢 Sala / Formato</span>
+                    <span class="valor">
+                      {{ orden.entradas?.[0]?.funciones?.salas?.nombre || 'Sala' }} 
+                      ({{ orden.entradas?.[0]?.funciones?.formato || 'Standard' }})
+                    </span>
+                  </div>
+                  
+                  <!-- Asientos comprados -->
+                  <div class="detalle-item full-width">
+                    <span class="label">💺 Asientos</span>
+                    <span class="valor">
+                      @for (entrada of orden.entradas; track entrada.id; let last = $last) {
+                        F: {{ entrada.fila }} - A: {{ entrada.numero_asiento }}{{ !last ? ', ' : '' }}
+                      }
+                    </span>
+                  </div>
+                }
+
+                <!-- 🍿 Mostrar los nombres y detalles de los productos de Candy Bar -->
+                @if (orden.items_candy && orden.items_candy.length > 0) {
+                  <div class="detalle-item full-width candy-resumen-tarjeta">
+                    <span class="label">🍿 Productos Candy</span>
+                    <ul class="lista-candy-mini">
+                      @for (candy of orden.items_candy; track candy.nombre) {
+                        <li>{{ candy.cantidad }}x {{ candy.nombre }} (${{ (candy.precio_dinero || 0) * (candy.cantidad || 1) }})</li>
+                      }
+                    </ul>
+                  </div>
+                }
               </div>
 
               <div class="codigo-seccion">
@@ -80,28 +100,43 @@
     <div class="modal-overlay" (click)="cerrarDetalles()">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>Pase de Entrada Digital</h3>
+          <h3>Pase Digital y Retiro</h3>
           <button class="btn-cerrar-cruz" (click)="cerrarDetalles()">✕</button>
         </div>
 
         <div class="modal-body">
-          <h4>{{ ordenSeleccionada.entradas?.[0]?.funciones?.peliculas?.nombre }}</h4>
-          <p class="modal-sub">
-            {{ ordenSeleccionada.entradas?.[0]?.funciones?.fecha_inicio | date: 'EEEE dd/MM/yyyy - HH:mm' }} hs
-          </p>
+          @if (ordenSeleccionada.entradas && ordenSeleccionada.entradas.length > 0) {
+            <h4>{{ ordenSeleccionada.entradas?.[0]?.funciones?.peliculas?.nombre }}</h4>
+            <p class="modal-sub">
+              {{ ordenSeleccionada.entradas?.[0]?.funciones?.fecha_inicio | date: 'EEEE dd/MM/yyyy - HH:mm' }} hs
+            </p>
+            <p class="modal-asientos-resumen">
+              <strong>Asientos:</strong> 
+              @for (ent of ordenSeleccionada.entradas; track ent.id; let last = $last) {
+                Fila {{ ent.fila }} Asiento {{ ent.numero_asiento }}{{ !last ? ', ' : '' }}
+              }
+            </p>
+          } @else {
+            <h4>🍿 Retiro de Candy Bar</h4>
+            <p class="modal-sub">Compra exclusiva de productos</p>
+          }
 
-          <!-- Opcional en el modal: Mostrar también los asientos en grande -->
-          <p class="modal-asientos-resumen">
-            <strong>Asientos:</strong> 
-            @for (ent of ordenSeleccionada.entradas; track ent.id; let last = $last) {
-              Fila {{ ent.fila }} Asiento {{ ent.numero_asiento }}{{ !last ? ', ' : '' }}
-            }
-          </p>
+          <!-- 🍿 Mostrar el nombre del producto detallado en el Modal -->
+          @if (ordenSeleccionada.items_candy && ordenSeleccionada.items_candy.length > 0) {
+            <div class="modal-candy-detalle">
+              <strong>Snacks incluidos:</strong>
+              <ul>
+                @for (item of ordenSeleccionada.items_candy; track item.nombre) {
+                  <li>{{ item.cantidad }}x {{ item.nombre }}</li>
+                }
+              </ul>
+            </div>
+          }
 
           <div class="qr-box">
             <img [src]="'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + ordenSeleccionada.codigo_retiro" alt="QR de Orden">
             
-            <p class="qr-instruccion">Acerca este código al lector de la entrada</p>
+            <p class="qr-instruccion">Presenta este código en la confitería o boletería</p>
             
             <div class="codigo-respaldo-box">
               <span class="label-respaldo">Código de respaldo:</span>

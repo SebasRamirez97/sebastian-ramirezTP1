@@ -139,4 +139,64 @@ export class EntradasService {
 
     return codigoUnico;
   }
+
+  async confirmarCompraConCandy(
+  usuarioId: string | null,
+  asientos: any[] = [], // 👈 Ahora puede venir vacío si es solo candy
+  metodoPago: string,
+  itemsCandyJson: any[] = [],
+  itemsConIdsFisicos: any[] = []
+): Promise<string> {
+  const codigoRetiro = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+  // 1. Creamos la orden principal (siempre se crea, tenga o no entradas)
+  const { data: ordenCreada, error: errorOrden } = await supabase
+    .from('ordenes')
+    .insert([
+      {
+        usuario_id: usuarioId,
+        codigo_retiro: codigoRetiro,
+        metodo_pago: metodoPago,
+        estado: 'pagado',
+        items_candy: itemsCandyJson.length > 0 ? itemsCandyJson : null
+      }
+    ])
+    .select()
+    .single();
+
+  if (errorOrden) throw errorOrden;
+
+  // 2. 🎟️ Solo si hay asientos seleccionados, los actualizamos y vinculamos
+  if (asientos && asientos.length > 0) {
+    const idsAsientos = asientos.map(a => a.id);
+    const { error: errorAsientos } = await supabase
+      .from('entradas')
+      .update({ estado: 'ocupado', orden_id: ordenCreada.id })
+      .in('id', idsAsientos);
+
+    if (errorAsientos) throw errorAsientos;
+  }
+
+  // 3. 🍿 Si hay productos del Candy Bar, reservamos los IDs físicos y los vinculamos
+  const idsFisicosAreservar: string[] = [];
+  itemsConIdsFisicos.forEach(item => {
+    if (item.idsFisicos) {
+      idsFisicosAreservar.push(...item.idsFisicos);
+    }
+  });
+
+  if (idsFisicosAreservar.length > 0) {
+    const { error: errorReserva } = await supabase
+      .from('productos')
+      .update({
+        estado: 'reservado',
+        orden_id: ordenCreada.id
+      })
+      .in('id', idsFisicosAreservar);
+
+    if (errorReserva) throw errorReserva;
+  }
+
+  return codigoRetiro;
+}
 }

@@ -22,15 +22,14 @@ export class CarteleraComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
-    console.log('🔍 [1] CarteleraComponent: Iniciando ngOnInit...');
+ 
     try {
       this.peliculas = await this.peliculasService.getPeliculas();
-      console.log('✅ [2] Películas recibidas:', this.peliculas);
+     
     } catch (error) {
-      console.error('❌ [3] Error al cargar la cartelera:', error);
+      
     } finally {
       this.cargando = false;
-      console.log('🏁 [4] Estado cargando establecido en FALSE');
       this.cdr.detectChanges(); // 👈 3. Fuerza a Angular a actualizar el HTML
     }
   }

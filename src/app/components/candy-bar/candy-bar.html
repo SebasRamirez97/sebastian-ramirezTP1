@@ -1,0 +1,86 @@
+<div class="cartelera-container">
+  <div class="header-section">
+    <h2>🍬 Candy Bar - Catálogo</h2>
+    
+    <div class="acciones-header">
+      <!-- Botón exclusivo de Admin para crear producto nuevo -->
+      @if (rol === 'admin') {
+        <button class="btn-crear" routerLink="/admin/productos/crear">
+          ➕ Nuevo Producto
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (cargando) {
+    <div class="loading-container">
+      <p class="loading">Cargando productos del Candy Bar...</p>
+    </div>
+  } @else {
+    
+    <!-- 🛒 BARRA FLOTANTE / SUPERIOR PARA IR A PAGAR (Aparece si seleccionas al menos 1 producto) -->
+    <div class="checkout-bar-container">
+      <button 
+        class="btn btn-primary btn-ir-checkout" 
+        (click)="irAlCheckout()">
+        🛒 Ir a Pagar Candy Bar (${{ totalCarritoPrecio || 0 }})
+      </button>
+    </div>
+
+    <div class="grid-cartelera">
+      @for (producto of productos; track producto.nombre) {
+        <div class="card-pelicula">
+          <!-- Imagen del producto agrupado -->
+          <div class="poster-wrapper">
+            @if (producto.imagen) {
+              <img [src]="producto.imagen" [alt]="producto.nombre" class="poster-img">
+            } @else {
+              <div class="sin-imagen">
+                Sin imagen
+              </div>
+            }
+          </div>
+
+          <!-- Información del producto -->
+          <div class="card-info">
+            <h3 class="titulo">{{ producto.nombre }}</h3>
+            <p class="detalle">🏷️ <strong>Categoría:</strong> {{ producto.categoria | titlecase }}</p>
+            <p class="detalle">💰 <strong>Precio:</strong> ${{ producto.precio_dinero }}</p>
+            <p class="detalle points">✨ <strong>Puntos:</strong> {{ producto.precio_puntos }} pts</p>
+            <p class="detalle stock" [class.sin-stock]="(producto.stock || 0) === 0">
+              📦 <strong>Disponibles:</strong> {{ producto.stock || 0 }} un.
+            </p>
+
+            <!-- Control de cantidad para el cliente (Carrito local) -->
+            <div class="contador-container">
+              <button 
+                class="btn-control" 
+                (click)="cambiarCantidad(producto, -1)" 
+                [disabled]="(producto.cantidadDeseada || 0) === 0">
+                -
+              </button>
+              <span class="cantidad-texto">{{ producto.cantidadDeseada || 0 }}</span>
+              <button 
+                class="btn-control" 
+                (click)="cambiarCantidad(producto, 1)" 
+                [disabled]="(producto.cantidadDeseada || 0) >= (producto.stock || 0)">
+                +
+              </button>
+            </div>
+
+            <!-- Botón exclusivo de Admin para sumar stock masivo -->
+            @if (rol === 'admin') {
+              <button class="btn-agregar-stock" (click)="agregarMasStock(producto)">
+                ➕ Agregar más stock
+              </button>
+            }
+          </div>
+        </div>
+      } @empty {
+        <div class="sin-peliculas">
+          <p>No hay productos disponibles en el Candy Bar actualmente.</p>
+        </div>
+      }
+    </div>
+  }
+</div>

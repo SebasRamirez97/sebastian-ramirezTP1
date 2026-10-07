@@ -1,0 +1,18 @@
+.error {
+  color: #e63946;
+  font-size: 0.85rem;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+form > div {
+  margin-bottom: 15px;
+}
+
+input, select, textarea {
+  width: 100%;
+  max-width: 400px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+}

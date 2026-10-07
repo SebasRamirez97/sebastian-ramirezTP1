@@ -5,7 +5,26 @@
     <p>Cargando detalles...</p>
   } @else {
     <div class="resumen-info">
-      <p><strong>Asientos seleccionados:</strong> {{ misAsientos.length }}</p>
+      <!-- Asientos -->
+      @if (misAsientos.length > 0) {
+        <p><strong>Asientos seleccionados:</strong> {{ misAsientos.length }} ( ${{ totalEntradasPesos | number:'1.2-2' }} )</p>
+      }
+
+      <!-- 🍬 Lista de productos de Candy Bar si existen -->
+      @if (itemsCandySeleccionados.length > 0) {
+        <div class="resumen-candy">
+          <h4>🍿 Productos del Candy Bar:</h4>
+          <ul>
+            @for (item of itemsCandySeleccionados; track item.id || item.nombre) {
+              <li>
+                {{ item.cantidad }}x {{ item.nombre }} - ${{ (item.precio * item.cantidad) | number:'1.2-2' }}
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      <hr />
       <p class="precio-total"><strong>Total a pagar:</strong> ${{ totalPagar | number:'1.2-2' }} (o {{ totalPuntos }} Pts)</p>
     </div>
 
@@ -52,7 +71,7 @@
     <!-- Simulación de pago para usuarios anónimos (Invitados) -->
     @if (usuarioId === null) {
       <div class="simulacion-pago-anonimo">
-        <label for="montoIngresado">Simular ingreso de tarjeta / efectivo (Total: ${{ totalPagar | number:'1.2-2' }}):</label>
+        <label for="montoIngresado">Simular ingreso de efectivo / tarjeta (Total: ${{ totalPagar | number:'1.2-2' }}):</label>
         <input 
           type="number" 
           id="montoIngresado" 
