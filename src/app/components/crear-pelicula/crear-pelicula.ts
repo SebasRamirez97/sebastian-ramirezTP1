@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { PeliculasService } from '../../services/peliculas'; // Ajusta la ruta a tu servicio
+import { PeliculasService } from '../../services/peliculas';
 
 @Component({
   selector: 'app-crear-pelicula',
@@ -12,9 +12,14 @@ import { PeliculasService } from '../../services/peliculas'; // Ajusta la ruta a
   styleUrls: ['./crear-pelicula.css']
 })
 export class CrearPeliculaComponent {
-  submitted = false;
-  subiendoImagen = false;
-  selectedFile: File | null = null;
+  // 🔹 Inyección moderna con inject()
+  private peliculasService = inject(PeliculasService);
+  private router = inject(Router);
+
+  // 🔹 Definición de estados con Signals
+  submitted = signal<boolean>(false);
+  subiendoImagen = signal<boolean>(false);
+  selectedFile = signal<File | null>(null);
 
   formPelicula = new FormGroup({
     nombre: new FormControl('', [Validators.required, Validators.minLength(2)]),
@@ -23,33 +28,31 @@ export class CrearPeliculaComponent {
     sinopsis: new FormControl('', [Validators.required, Validators.minLength(10)])
   });
 
-  constructor(
-    private peliculasService: PeliculasService,
-    private router: Router
-  ) {}
-
   // 🔹 Captura el archivo seleccionado desde el input HTML
   onFileSelected(event: any) {
     const file: File = event.target.files[0];
     if (file) {
-      this.selectedFile = file;
+      this.selectedFile.set(file);
     }
   }
 
-  async guardarPelicula() {
-    this.submitted = true;
+  async guardarPelicula(): Promise<void> {
+    this.submitted.set(true);
 
     // Valida formulario e imagen
-    if (this.formPelicula.invalid || !this.selectedFile) {
+    if (this.formPelicula.invalid || !this.selectedFile()) {
       this.formPelicula.markAllAsTouched();
       return;
     }
 
     try {
-      this.subiendoImagen = true;
+      this.subiendoImagen.set(true);
+      const file = this.selectedFile();
+
+      if (!file) return;
 
       // 1. Subir imagen a Supabase Storage
-      const urlImagen = await this.peliculasService.subirImagen(this.selectedFile);
+      const urlImagen = await this.peliculasService.subirImagen(file);
 
       // 2. Guardar película con la URL obtenida
       const datos = this.formPelicula.value;
@@ -66,12 +69,13 @@ export class CrearPeliculaComponent {
       console.error('Error al agregar película:', error);
       alert('Ocurrió un error al guardar la película: ' + (error.message || ''));
     } finally {
-      this.subiendoImagen = false;
+      this.subiendoImagen.set(false);
     }
   }
 
-  cancelar() {
-    this.submitted = false;
+  cancelar(): void {
+    this.submitted.set(false);
+    this.selectedFile.set(null);
     this.formPelicula.reset();
     this.router.navigate(['/cartelera']);
   }

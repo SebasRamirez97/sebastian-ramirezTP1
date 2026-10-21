@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { PeliculasService } from '../../services/peliculas';
@@ -12,24 +12,29 @@ import { Pelicula } from '../../models/pelicula.model';
   styleUrls: ['./home.component.css']
 })
 export class HomeComponent implements OnInit {
-  topPeliculas: Pelicula[] = [];
-  cargando: boolean = true;
+  // 🔹 Inyección moderna con inject()
+  private peliculasService = inject(PeliculasService);
+  private router = inject(Router);
 
-  constructor(
-    private peliculasService: PeliculasService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
-  ) {}
+  // 🔹 Declaración de estados usando Signals (adiós a ChangeDetectorRef)
+  topPeliculas = signal<Pelicula[]>([]);
+  cargando = signal<boolean>(true);
 
   async ngOnInit() {
     try {
-      this.topPeliculas = await this.peliculasService.getTopPeliculas(3);
+      this.cargando.set(true);
+      const data = await this.peliculasService.getTopPeliculas(3);
+      this.topPeliculas.set(data);
     } catch (error) {
       console.error('Error al cargar top películas:', error);
     } finally {
-      this.cargando = false;
-      this.cdr.detectChanges(); // Fuerza la actualización en pantalla
+      this.cargando.set(false);
     }
+  }
+
+  // 🔹 Función trackBy requerida para *ngFor
+  trackByPelicula(index: number, pelicula: Pelicula): string | undefined {
+    return pelicula.id;
   }
 
   verDetalle(id?: string) {

@@ -9,36 +9,36 @@
       <div class="campo-form">
         <label>Correo Electrónico</label>
         <input type="email" formControlName="email" placeholder="empleado@cine.com" />
-        @if (formEmpleado.get('email')?.invalid && (formEmpleado.get('email')?.touched || submitted)) {
+        <div *ngIf="formEmpleado.get('email')?.invalid && (formEmpleado.get('email')?.touched || submitted())">
           <small class="error">Ingrese un correo electrónico válido.</small>
-        }
+        </div>
       </div>
 
       <!-- Contraseña -->
       <div class="campo-form">
         <label>Contraseña</label>
         <input type="password" formControlName="password" placeholder="Mínimo 6 caracteres" />
-        @if (formEmpleado.get('password')?.invalid && (formEmpleado.get('password')?.touched || submitted)) {
+        <div *ngIf="formEmpleado.get('password')?.invalid && (formEmpleado.get('password')?.touched || submitted())">
           <small class="error">La contraseña debe tener al menos 6 caracteres.</small>
-        }
+        </div>
       </div>
 
       <!-- Nombre -->
       <div class="campo-form">
         <label>Nombre</label>
         <input type="text" formControlName="nombre" placeholder="Nombre del empleado" />
-        @if (formEmpleado.get('nombre')?.invalid && (formEmpleado.get('nombre')?.touched || submitted)) {
+        <div *ngIf="formEmpleado.get('nombre')?.invalid && (formEmpleado.get('nombre')?.touched || submitted())">
           <small class="error">El nombre es requerido.</small>
-        }
+        </div>
       </div>
 
       <!-- Apellido -->
       <div class="campo-form">
         <label>Apellido</label>
         <input type="text" formControlName="apellido" placeholder="Apellido del empleado" />
-        @if (formEmpleado.get('apellido')?.invalid && (formEmpleado.get('apellido')?.touched || submitted)) {
+        <div *ngIf="formEmpleado.get('apellido')?.invalid && (formEmpleado.get('apellido')?.touched || submitted())">
           <small class="error">El apellido es requerido.</small>
-        }
+        </div>
       </div>
 
       <!-- Botones de Acción -->

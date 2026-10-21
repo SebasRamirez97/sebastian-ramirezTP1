@@ -4,14 +4,21 @@
     <p class="subtitle">Vista administrativa para el control de horarios y salas.</p>
   </div>
 
-  @if (cargando) {
+  <!-- Estado de carga con *ngIf / *ngElse -->
+  <div *ngIf="cargando(); else contenidoAgenda">
     <p class="loading">Cargando la agenda completa...</p>
-  } @else {
-    @if (funciones.length === 0) {
+  </div>
+
+  <ng-template #contenidoAgenda>
+    <!-- Si no hay funciones -->
+    <div *ngIf="funciones().length === 0; else tablaFunciones">
       <div class="alert alert-info">
         No hay funciones programadas en el sistema. Ve a "Crear Función" para empezar.
       </div>
-    } @else {
+    </div>
+
+    <!-- Si hay funciones, mostramos la tabla con *ngFor clásico -->
+    <ng-template #tablaFunciones>
       <div class="table-responsive">
         <table class="admin-table">
           <thead>
@@ -27,41 +34,38 @@
             </tr>
           </thead>
           <tbody>
-            @for (funcion of funciones; track funcion.id) {
-              <tr>
-                <td class="fecha">{{ funcion.fecha_inicio | date: 'dd/MM/yyyy' }}</td>
-                <td class="hora">{{ funcion.fecha_inicio | date: 'HH:mm' }} hs</td>
+            <tr *ngFor="let funcion of funciones(); trackBy: trackByFuncion">
+              <td class="fecha">{{ funcion.fecha_inicio | date: 'dd/MM/yyyy' }}</td>
+              <td class="hora">{{ funcion.fecha_inicio | date: 'HH:mm' }} hs</td>
 
-                <!-- IMPORTANTE: Asegúrate de que getFunciones() en tu servicio traiga peliculas(titulo) -->
-                <td class="pelicula">{{ funcion.peliculas?.nombre || 'Desconocida' }}</td>
+              <td class="pelicula">{{ funcion.peliculas?.nombre || 'Desconocida' }}</td>
 
-                <td>{{ funcion.salas?.nombre || 'No asignada' }}</td>
-                <td>
-                  <span class="badge">{{ funcion.formato }}</span>
-                </td>
-                <td>${{ funcion.precio_pesos }}</td>
-                <td>{{ funcion.precio_puntos }}</td>
+              <td>{{ funcion.salas?.nombre || 'No asignada' }}</td>
+              <td>
+                <span class="badge">{{ funcion.formato }}</span>
+              </td>
+              <td>${{ funcion.precio_pesos }}</td>
+              <td>{{ funcion.precio_puntos }}</td>
 
-                <td class="acciones">
-                  <!-- Botón de Editar que lleva el ID dinámico a la ruta -->
-                  <button
-                    class="btn-icon btn-edit"
-                    [routerLink]="['/editar-funcion', funcion.id]"
-                    title="Editar"
-                  >
-                    ✏️
-                  </button>
+              <td class="acciones">
+                <!-- Botón de Editar -->
+                <button
+                  class="btn-icon btn-edit"
+                  [routerLink]="['/editar-funcion', funcion.id]"
+                  title="Editar"
+                >
+                  ✏️
+                </button>
 
-                  <!-- Botón de Eliminar que ya tenías o programamos antes -->
-                  <button class="btn-icon btn-delete" (click)="eliminar(funcion)" title="Eliminar">
-                    🗑️
-                  </button>
-                </td>
-              </tr>
-            }
+                <!-- Botón de Eliminar -->
+                <button class="btn-icon btn-delete" (click)="eliminar(funcion)" title="Eliminar">
+                  🗑️
+                </button>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
-    }
-  }
+    </ng-template>
+  </ng-template>
 </div>

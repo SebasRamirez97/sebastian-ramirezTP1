@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -15,31 +15,32 @@ import { FormatoSala } from '../../models/funcion.model';
   styleUrls: ['./editar-funcion.css'],
 })
 export class EditarFuncionComponent implements OnInit {
-  funcionForm!: FormGroup;
-  peliculas: Pelicula[] = [];
-  formatos: FormatoSala[] = ['2D', '3D', '4D', '5D'];
-  
-  funcionId!: string;
-  cargando: boolean = true;
-  guardando: boolean = false;
-  mensajeExito: string | null = null;
-  mensajeError: string | null = null;
+  // 🔹 Inyección moderna con inject()
+  private fb = inject(FormBuilder);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private funcionesService = inject(FuncionesService);
+  private peliculasService = inject(PeliculasService);
 
-  constructor(
-    private fb: FormBuilder,
-    private route: ActivatedRoute,
-    private router: Router,
-    private funcionesService: FuncionesService,
-    private peliculasService: PeliculasService,
-    private cdr: ChangeDetectorRef
-  ) {}
+  funcionForm!: FormGroup;
+  
+  // 🔹 Definición de estados con Signals (adiós a ChangeDetectorRef)
+  peliculas = signal<Pelicula[]>([]);
+  formatos = signal<FormatoSala[]>(['2D', '3D', '4D', '5D']);
+  
+  funcionId = signal<string>('');
+  cargando = signal<boolean>(true);
+  guardando = signal<boolean>(false);
+  mensajeExito = signal<string | null>(null);
+  mensajeError = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {
     this.inicializarFormulario();
-    this.funcionId = this.route.snapshot.paramMap.get('id') || '';
+    const id = this.route.snapshot.paramMap.get('id') || '';
+    this.funcionId.set(id);
 
     await this.cargarPeliculas();
-    if (this.funcionId) {
+    if (this.funcionId()) {
       await this.cargarDatosFuncion();
     }
   }
@@ -56,28 +57,24 @@ export class EditarFuncionComponent implements OnInit {
 
   async cargarPeliculas(): Promise<void> {
     try {
-      this.peliculas = await this.peliculasService.getPeliculas();
-      this.cdr.detectChanges();
+      const data = await this.peliculasService.getPeliculas();
+      this.peliculas.set(data);
     } catch (error) {
-      this.mensajeError = 'Error al cargar el catálogo de películas.';
-      this.cdr.detectChanges();
+      this.mensajeError.set('Error al cargar el catálogo de películas.');
     }
   }
 
   async cargarDatosFuncion(): Promise<void> {
     try {
-      this.cargando = true;
-      this.cdr.detectChanges();
+      this.cargando.set(true);
 
-      const funcion = await this.funcionesService.getFuncionPorId(this.funcionId);
+      const funcion = await this.funcionesService.getFuncionPorId(this.funcionId());
       
-      // Adaptar la fecha al formato que acepta el input type="datetime-local" (YYYY-MM-DDTHH:mm)
       let fechaLocal = '';
       if (funcion.fecha_inicio) {
         fechaLocal = new Date(funcion.fecha_inicio).toISOString().slice(0, 16);
       }
 
-      // Parcheamos el formulario con los datos actuales
       this.funcionForm.patchValue({
         pelicula_id: funcion.pelicula_id,
         formato: funcion.formato,
@@ -87,11 +84,19 @@ export class EditarFuncionComponent implements OnInit {
       });
 
     } catch (error: any) {
-      this.mensajeError = error.message || 'Error al obtener los datos de la función.';
+      this.mensajeError.set(error.message || 'Error al obtener los datos de la función.');
     } finally {
-      this.cargando = false;
-      this.cdr.detectChanges();
+      this.cargando.set(false);
     }
+  }
+
+  // 🔹 Funciones trackBy para las listas en el HTML
+  trackByPelicula(index: number, pelicula: Pelicula): string | undefined {
+    return pelicula.id;
+  }
+
+  trackByFormato(index: number, fmt: string): string {
+    return fmt;
   }
 
   async onSubmit(): Promise<void> {
@@ -100,10 +105,9 @@ export class EditarFuncionComponent implements OnInit {
       return;
     }
 
-    this.guardando = true;
-    this.mensajeExito = null;
-    this.mensajeError = null;
-    this.cdr.detectChanges();
+    this.guardando.set(true);
+    this.mensajeExito.set(null);
+    this.mensajeError.set(null);
 
     try {
       const formValue = this.funcionForm.value;
@@ -113,21 +117,18 @@ export class EditarFuncionComponent implements OnInit {
         fecha_inicio: new Date(formValue.fecha_inicio).toISOString(),
       };
 
-      await this.funcionesService.actualizarFuncion(this.funcionId, dto);
+      await this.funcionesService.actualizarFuncion(this.funcionId(), dto);
 
-      this.mensajeExito = '¡Función actualizada con éxito!';
-      this.cdr.detectChanges();
+      this.mensajeExito.set('¡Función actualizada con éxito!');
 
-      // Opcional: Redirigir a la lista de funciones después de 1.5 segundos
       setTimeout(() => {
         this.router.navigate(['/lista-funciones']);
       }, 1500);
 
     } catch (err: any) {
-      this.mensajeError = err.message || 'Ocurrió un error al intentar actualizar la función.';
+      this.mensajeError.set(err.message || 'Ocurrió un error al intentar actualizar la función.');
     } finally {
-      this.guardando = false;
-      this.cdr.detectChanges();
+      this.guardando.set(false);
     }
   }
 }

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -12,7 +12,10 @@ import { CommonModule } from '@angular/common';
   styleUrls: ['./registrar-empleado.component.css']
 })
 export class RegistrarEmpleadoComponent {
-  
+  // 🔹 Inyección moderna con inject()
+  private authService = inject(AuthService);
+  private router = inject(Router);
+
   // 🔹 Formulario exclusivo para empleados (email, password, nombre, apellido)
   formEmpleado = new FormGroup({
     email: new FormControl('', [Validators.required, Validators.email]),
@@ -21,12 +24,11 @@ export class RegistrarEmpleadoComponent {
     apellido: new FormControl('', [Validators.required])
   });
 
-  submitted = false;
+  // 🔹 Estado con Signals
+  submitted = signal<boolean>(false);
 
-  constructor(private authService: AuthService, private router: Router) {}
-
-  async registrarEmpleado() {
-    this.submitted = true;
+  async registrarEmpleado(): Promise<void> {
+    this.submitted.set(true);
     if (this.formEmpleado.invalid) {
       this.formEmpleado.markAllAsTouched();
       return;
@@ -38,19 +40,17 @@ export class RegistrarEmpleadoComponent {
       console.log('Empleado registrado exitosamente:', res);
       alert('¡Empleado registrado con éxito!');
       
-      // Opcional: Redirigir al panel de administración o limpiar formulario
       this.formEmpleado.reset();
-      this.submitted = false;
+      this.submitted.set(false);
     } catch (err: any) {
       console.error('Error al registrar empleado:', err.message);
       alert('Error al registrar empleado: ' + err.message);
     }
   }
 
-  volver() {
+  volver(): void {
     this.formEmpleado.reset();
-    this.submitted = false;
-    // Redirige a donde consideres necesario para el administrador (ej: /admin/dashboard)
+    this.submitted.set(false);
     this.router.navigate(['/home']); 
   }
 }

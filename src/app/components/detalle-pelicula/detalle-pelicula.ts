@@ -1,11 +1,11 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { PeliculasService } from '../../services/peliculas';
 import { Pelicula } from '../../models/pelicula.model';
-import { AuthService } from '../../services/auth.service'; // 👈 Ajusta la ruta de tu servicio de auth
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-detalle-pelicula',
@@ -14,79 +14,71 @@ import { AuthService } from '../../services/auth.service'; // 👈 Ajusta la rut
   templateUrl: './detalle-pelicula.html',
   styleUrls: ['./detalle-pelicula.css'],
 })
-export class DetallePeliculaComponent implements OnInit, OnDestroy {
-  pelicula: Pelicula | null = null;
-  peliculaEditada: Partial<Pelicula> = {};
-  cargando: boolean = true;
-  modoEdicion: boolean = false;
+export class DetallePeliculaComponent implements OnInit {
+  // 🔹 Inyección moderna con inject()
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private peliculasService = inject(PeliculasService);
+  private authService = inject(AuthService);
 
-  rol: string = ''; // 👈 Variable para almacenar el rol actual
-  private rolSub!: Subscription;
+  // 🔹 Convertimos el observable del rol en un Signal de lectura automática
+  rol = toSignal(this.authService.rol$, { initialValue: '' });
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private peliculasService: PeliculasService,
-    private authService: AuthService, // 👈 Inyectamos AuthService
-    private cdr: ChangeDetectorRef,
-  ) {}
+  // 🔹 Declaración de estados con Signals (adiós a ChangeDetectorRef y subscripciones manuales)
+  pelicula = signal<Pelicula | null>(null);
+  peliculaEditada = signal<Partial<Pelicula>>({});
+  cargando = signal<boolean>(true);
+  modoEdicion = signal<boolean>(false);
 
   async ngOnInit() {
-    // 🔹 Suscribirse a los cambios de rol en tiempo real
-    this.rolSub = this.authService.rol$.subscribe((nuevoRol) => {
-      this.rol = nuevoRol;
-      this.cdr.detectChanges();
-    });
-
     const id = this.route.snapshot.paramMap.get('id');
 
     if (!id) {
-      this.cargando = false;
-      this.cdr.detectChanges();
+      this.cargando.set(false);
       return;
     }
 
     try {
-      this.pelicula = await this.peliculasService.getPeliculaPorId(id);
+      const data = await this.peliculasService.getPeliculaPorId(id);
+      this.pelicula.set(data);
     } catch (error) {
       console.error('❌ Error al cargar el detalle de la película:', error);
     } finally {
-      this.cargando = false;
-      this.cdr.detectChanges();
-    }
-  }
-
-  ngOnDestroy() {
-    // 🔹 Limpiar la suscripción para evitar fugas de memoria
-    if (this.rolSub) {
-      this.rolSub.unsubscribe();
+      this.cargando.set(false);
     }
   }
 
   activarEdicion() {
-    if (this.pelicula) {
-      this.modoEdicion = true;
-      this.peliculaEditada = { ...this.pelicula };
+    const p = this.pelicula();
+    if (p) {
+      this.modoEdicion.set(true);
+      this.peliculaEditada.set({ ...p });
     }
   }
 
   cancelarEdicion() {
-    this.modoEdicion = false;
-    this.peliculaEditada = {};
+    this.modoEdicion.set(false);
+    this.peliculaEditada.set({});
+  }
+
+  // Métodos auxiliares para actualizar propiedades individuales desde el HTML con ngModel en Signals
+  actualizarCampo(campo: keyof Pelicula, event: any) {
+    const valor = event.target.value;
+    this.peliculaEditada.update(editada => ({ ...editada, [campo]: valor }));
   }
 
   async guardarCambios() {
-    if (!this.pelicula?.id) return;
+    const p = this.pelicula();
+    if (!p?.id) return;
 
     try {
       const actualizada = await this.peliculasService.actualizarPelicula(
-        this.pelicula.id,
-        this.peliculaEditada,
+        p.id,
+        this.peliculaEditada(),
       );
-      this.pelicula = actualizada;
-      this.modoEdicion = false;
+      this.pelicula.set(actualizada);
+      this.modoEdicion.set(false);
       alert('¡Película actualizada correctamente!');
-      this.cdr.detectChanges();
     } catch (error) {
       console.error('Error al actualizar película:', error);
       alert('Error al guardar los cambios.');
@@ -94,12 +86,13 @@ export class DetallePeliculaComponent implements OnInit, OnDestroy {
   }
 
   async eliminarPelicula() {
-    if (!this.pelicula?.id) return;
+    const p = this.pelicula();
+    if (!p?.id) return;
 
-    const confirmar = confirm(`¿Estás seguro de que deseas eliminar "${this.pelicula.nombre}"?`);
+    const confirmar = confirm(`¿Estás seguro de que deseas eliminar "${p.nombre}"?`);
     if (confirmar) {
       try {
-        await this.peliculasService.eliminarPelicula(this.pelicula.id);
+        await this.peliculasService.eliminarPelicula(p.id);
         alert('Película eliminada con éxito.');
         this.router.navigate(['/cartelera']);
       } catch (error) {
@@ -110,8 +103,9 @@ export class DetallePeliculaComponent implements OnInit, OnDestroy {
   }
 
   irAFunciones(): void {
-    if (this.pelicula && this.pelicula.id) {
-      this.router.navigate(['/peliculas', this.pelicula.id, 'funciones']);
+    const p = this.pelicula();
+    if (p && p.id) {
+      this.router.navigate(['/peliculas', p.id, 'funciones']);
     }
   }
 

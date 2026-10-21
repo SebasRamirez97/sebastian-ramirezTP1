@@ -1,5 +1,4 @@
-// 1. Importar ChangeDetectorRef
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core'; 
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FuncionesService } from '../../services/funciones';
@@ -15,20 +14,19 @@ import { FormatoSala } from '../../models/funcion.model';
   styleUrls: ['./crear-funcion.css'],
 })
 export class CrearFuncionComponent implements OnInit {
+  // 🔹 Inyección moderna con inject()
+  private fb = inject(FormBuilder);
+  private funcionesService = inject(FuncionesService);
+  private peliculasService = inject(PeliculasService);
+
   funcionForm!: FormGroup;
-  peliculas: Pelicula[] = [];
-  formatos: FormatoSala[] = ['2D', '3D', '4D', '5D'];
-
-  cargando: boolean = false;
-  mensajeExito: string | null = null;
-  mensajeError: string | null = null;
-
-  constructor(
-    private fb: FormBuilder,
-    private funcionesService: FuncionesService,
-    private peliculasService: PeliculasService,
-    private cdr: ChangeDetectorRef // 2. Inyectar ChangeDetectorRef
-  ) {}
+  
+  // 🔹 Definición de estados con Signals (adiós a ChangeDetectorRef)
+  peliculas = signal<Pelicula[]>([]);
+  formatos = signal<FormatoSala[]>(['2D', '3D', '4D', '5D']);
+  cargando = signal<boolean>(false);
+  mensajeExito = signal<string | null>(null);
+  mensajeError = signal<string | null>(null);
 
   ngOnInit(): void {
     this.inicializarFormulario();
@@ -47,15 +45,20 @@ export class CrearFuncionComponent implements OnInit {
 
   async cargarPeliculas(): Promise<void> {
     try {
-      this.peliculas = await this.peliculasService.getPeliculas();
-      
-      // 3. Forzar a Angular a actualizar la vista con los nuevos datos
-      this.cdr.detectChanges(); 
-      
+      const data = await this.peliculasService.getPeliculas();
+      this.peliculas.set(data);
     } catch (error) {
-      this.mensajeError = 'Error al cargar el catálogo de películas.';
-      this.cdr.detectChanges(); // También lo llamamos aquí por si hay error
+      this.mensajeError.set('Error al cargar el catálogo de películas.');
     }
+  }
+
+  // 🔹 Función trackBy para *ngFor de películas y formatos
+  trackByPelicula(index: number, pelicula: Pelicula): string | undefined {
+    return pelicula.id;
+  }
+
+  trackByFormato(index: number, fmt: string): string {
+    return fmt;
   }
 
   async onSubmit(): Promise<void> {
@@ -64,10 +67,9 @@ export class CrearFuncionComponent implements OnInit {
       return;
     }
 
-    this.cargando = true;
-    this.mensajeExito = null;
-    this.mensajeError = null;
-    this.cdr.detectChanges(); // Actualizar vista para mostrar el estado "cargando"
+    this.cargando.set(true);
+    this.mensajeExito.set(null);
+    this.mensajeError.set(null);
 
     try {
       const formValue = this.funcionForm.value;
@@ -79,23 +81,22 @@ export class CrearFuncionComponent implements OnInit {
 
       const nuevaFuncion = await this.funcionesService.crearFuncion(dto);
 
-      this.mensajeExito = `¡Función creada con éxito! Se le asignó automáticamente la sala ID: ${nuevaFuncion.sala_id}.`;
+      this.mensajeExito.set(`¡Función creada con éxito! Se le asignó automáticamente la sala ID: ${nuevaFuncion.sala_id}.`);
       this.funcionForm.reset({
         formato: '2D',
         precio_pesos: 0,
         precio_puntos: 0,
       });
     } catch (err: any) {
-      this.mensajeError = err.message || 'Ocurrió un error al intentar crear la función.';
+      this.mensajeError.set(err.message || 'Ocurrió un error al intentar crear la función.');
     } finally {
-      this.cargando = false;
-      this.cdr.detectChanges(); // Actualizar vista al terminar el proceso
+      this.cargando.set(false);
     }
   }
 
   onCancelar(): void {
     this.funcionForm.reset();
-    this.mensajeExito = '';
-    this.mensajeError = '';
+    this.mensajeExito.set(null);
+    this.mensajeError.set(null);
   }
 }

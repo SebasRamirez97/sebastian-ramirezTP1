@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -14,68 +14,70 @@ import { supabase } from '../../services/supabaseClient';
   styleUrls: ['./checkout.css']
 })
 export class CheckoutComponent implements OnInit {
-  funcionId: string = '';
-  usuarioId: string | null = null; 
-  misAsientos: any[] = [];
-  cargando: boolean = true;
-  montoIngresadoAnonimo: number = 0;
+  // 🔹 Inyección moderna con inject()
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private entradasService = inject(EntradasService);
+  private productosService = inject(ProductosService);
+
+  // 🔹 Declaración de estados con Signals (adiós a ChangeDetectorRef)
+  funcionId = signal<string>('');
+  usuarioId = signal<string | null>(null);
+  misAsientos = signal<any[]>([]);
+  cargando = signal<boolean>(true);
+  montoIngresadoAnonimo = signal<number>(0);
   
-  funcionData: any = {
+  funcionData = signal<any>({
     precio_pesos: 0,
     precio_puntos: 0
-  };
+  });
   
-  metodoPago: string = 'efectivo';
-  creditosAUsar: number = 0;
+  metodoPago = signal<string>('efectivo');
+  creditosAUsar = signal<number>(0);
 
   // 🍬 Items de Candy Bar seleccionados
-  itemsCandySeleccionados: any[] = [];
+  itemsCandySeleccionados = signal<any[]>([]);
 
   // IDs locales si es anónimo
   private idsAsientosAnonimo: string[] = [];
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private entradasService: EntradasService,
-    private productosService: ProductosService,
-    private cdr: ChangeDetectorRef
-  ) {}
-
   async ngOnInit(): Promise<void> {
-    this.funcionId = this.route.snapshot.paramMap.get('funcionId') || '';
+    const idParam = this.route.snapshot.paramMap.get('funcionId') || '';
+    this.funcionId.set(idParam);
 
+    let candyTemp: any[] = [];
     // 🍬 1. Intentamos recuperar del localStorage el carrito temporal del Candy Bar
     const storedCandy = localStorage.getItem('carritoCandyTemp');
     if (storedCandy) {
       try {
         const parsed = JSON.parse(storedCandy);
-        this.itemsCandySeleccionados = parsed.map((item: any) => ({
+        candyTemp = parsed.map((item: any) => ({
           ...item,
           precio: Number(item.precio || item.precio_dinero || 0),
           cantidad: Number(item.cantidad || item.cantidadDeseada || 1)
         }));
       } catch (e) {
-        this.itemsCandySeleccionados = [];
+        candyTemp = [];
       }
     }
 
     // 🍬 2. Si no hay nada en localStorage, probamos el servicio
-    if (this.itemsCandySeleccionados.length === 0) {
+    if (candyTemp.length === 0) {
       const serviceItems = this.productosService.obtenerCarritoTemp();
-      this.itemsCandySeleccionados = serviceItems.map((item: any) => ({
+      candyTemp = serviceItems.map((item: any) => ({
         ...item,
         precio: Number(item.precio || item.precio_dinero || 0),
         cantidad: Number(item.cantidad || item.cantidadDeseada || 1)
       }));
     }
+    this.itemsCandySeleccionados.set(candyTemp);
 
     const { data: authData } = await supabase.auth.getUser();
     
     if (authData?.user) {
-      this.usuarioId = authData.user.id;
+      this.usuarioId.set(authData.user.id);
     } else {
-      this.usuarioId = null;
+      this.usuarioId.set(null);
       const anonimoStr = localStorage.getItem('clienteAnonimo');
       if (anonimoStr) {
         const anonimo = JSON.parse(anonimoStr);
@@ -83,15 +85,15 @@ export class CheckoutComponent implements OnInit {
       }
     }
 
-    // 🎟️ 3. También respaldamos/recuperamos los asientos seleccionados si no vinieron por parámetro de ruta pero están en localStorage
-    if (!this.funcionId || this.funcionId === 'solo-candy-placeholder-id') {
+    // 🎟️ 3. Respaldamos/recuperamos los asientos seleccionados si no vinieron por parámetro
+    if (!this.funcionId() || this.funcionId() === 'solo-candy-placeholder-id') {
       const asientosLocal = localStorage.getItem('asientosSeleccionados');
       if (asientosLocal) {
         try {
           const parsedAsientos = JSON.parse(asientosLocal);
           if (parsedAsientos.length > 0) {
-            this.misAsientos = parsedAsientos;
-            this.funcionId = parsedAsientos[0].funcion_id;
+            this.misAsientos.set(parsedAsientos);
+            this.funcionId.set(parsedAsientos[0].funcion_id);
           }
         } catch (e) {}
       }
@@ -102,13 +104,11 @@ export class CheckoutComponent implements OnInit {
 
   async cargarDatosCheckout(): Promise<void> {
     try {
-      this.cargando = true;
+      this.cargando.set(true);
 
-      if (!this.funcionId || this.funcionId === 'solo-candy-placeholder-id') {
-        // Si realmente es solo candy bar sin asientos
-        if (this.misAsientos.length === 0) {
-          this.cargando = false;
-          this.cdr.detectChanges();
+      if (!this.funcionId() || this.funcionId() === 'solo-candy-placeholder-id') {
+        if (this.misAsientos().length === 0) {
+          this.cargando.set(false);
           return;
         }
       }
@@ -119,66 +119,70 @@ export class CheckoutComponent implements OnInit {
     } catch (error: any) {
       alert('Hubo un error al cargar el resumen de compra: ' + error.message);
     } finally {
-      this.cargando = false;
-      this.cdr.detectChanges(); 
+      this.cargando.set(false);
     }
   }
 
   async cargarDetalleFuncion(): Promise<void> {
-    if (!this.funcionId) return;
+    const fId = this.funcionId();
+    if (!fId) return;
     const { data, error } = await supabase
       .from('funciones')
       .select('precio_pesos, precio_puntos')
-      .eq('id', this.funcionId)
+      .eq('id', fId)
       .single();
 
     if (!error && data) {
-      this.funcionData = data;
+      this.funcionData.set(data);
     }
   }
 
   async cargarAsientosSeleccionados(): Promise<void> {
-    // Si ya los tenemos cargados por localStorage desde la pantalla anterior, los validamos directamente
-    if (this.misAsientos && this.misAsientos.length > 0) {
+    if (this.misAsientos() && this.misAsientos().length > 0) {
       return;
     }
 
-    if (!this.funcionId) return;
+    const fId = this.funcionId();
+    if (!fId) return;
 
-    const todasLasEntradas = await this.entradasService.getEntradasPorFuncion(this.funcionId);
+    const todasLasEntradas = await this.entradasService.getEntradasPorFuncion(fId);
     
     if (!todasLasEntradas) {
-      this.misAsientos = [];
+      this.misAsientos.set([]);
       return;
     }
 
-    if (this.usuarioId) {
-      this.misAsientos = todasLasEntradas.filter(
-        e => e.usuario_id === this.usuarioId && (e.estado === 'seleccionado' || e.estado === 'ocupado')
+    const uId = this.usuarioId();
+    if (uId) {
+      const filtrados = todasLasEntradas.filter(
+        e => e.usuario_id === uId && (e.estado === 'seleccionado' || e.estado === 'ocupado')
       );
+      this.misAsientos.set(filtrados);
     } else {
-      this.misAsientos = todasLasEntradas.filter(
+      const filtrados = todasLasEntradas.filter(
         e => this.idsAsientosAnonimo.includes(e.id) && (e.estado === 'seleccionado' || e.estado === 'ocupado')
       );
+      this.misAsientos.set(filtrados);
     }
   }
 
   // 🧮 CÁLCULOS DE TOTALES UNIFICADOS
   get totalEntradasPesos(): number {
-    const precio = Number(this.funcionData?.precio_pesos || 0);
-    return Number(this.misAsientos?.length || 0) * precio;
+    const precio = Number(this.funcionData()?.precio_pesos || 0);
+    return Number(this.misAsientos()?.length || 0) * precio;
   }
 
   get totalEntradasPuntos(): number {
-    const precioPts = Number(this.funcionData?.precio_puntos || 0);
-    return Number(this.misAsientos?.length || 0) * precioPts;
+    const precioPts = Number(this.funcionData()?.precio_puntos || 0);
+    return Number(this.misAsientos()?.length || 0) * precioPts;
   }
 
   get totalCandyPesos(): number {
-    if (!this.itemsCandySeleccionados || this.itemsCandySeleccionados.length === 0) {
+    const items = this.itemsCandySeleccionados();
+    if (!items || items.length === 0) {
       return 0;
     }
-    return this.itemsCandySeleccionados.reduce((acc, item) => {
+    return items.reduce((acc, item) => {
       const precio = Number(item.precio || item.precio_dinero || 0);
       const cantidad = Number(item.cantidad || item.cantidadDeseada || 0);
       return acc + (precio * cantidad);
@@ -186,10 +190,11 @@ export class CheckoutComponent implements OnInit {
   }
 
   get totalCandyPuntos(): number {
-    if (!this.itemsCandySeleccionados || this.itemsCandySeleccionados.length === 0) {
+    const items = this.itemsCandySeleccionados();
+    if (!items || items.length === 0) {
       return 0;
     }
-    return this.itemsCandySeleccionados.reduce((acc, item) => {
+    return items.reduce((acc, item) => {
       const puntos = Number(item.precio_puntos || 0);
       const cantidad = Number(item.cantidad || item.cantidadDeseada || 0);
       return acc + (puntos * cantidad);
@@ -204,34 +209,40 @@ export class CheckoutComponent implements OnInit {
     return this.totalEntradasPuntos + this.totalCandyPuntos;
   }
 
+  // Métodos trackBy para *ngFor
+  trackByItemCandy(index: number, item: any): any {
+    return item.id || item.producto_id || item.nombre;
+  }
+
   async confirmarPagoFinal(): Promise<void> {
     try {
-      if (this.misAsientos.length === 0 && this.itemsCandySeleccionados.length === 0) {
+      if (this.misAsientos().length === 0 && this.itemsCandySeleccionados().length === 0) {
         alert('Tu carrito está vacío.');
         return;
       }
 
-      const itemsConIdsFisicos = this.productosService.obtenerItemsSeleccionadosParaCheckout(this.itemsCandySeleccionados);
-      const itemsCandyParaJson = this.itemsCandySeleccionados.map(item => ({
+      const itemsConIdsFisicos = this.productosService.obtenerItemsSeleccionadosParaCheckout(this.itemsCandySeleccionados());
+      const itemsCandyParaJson = this.itemsCandySeleccionados().map(item => ({
         id: item.id || item.producto_id,
         nombre: item.nombre,
         precio: Number(item.precio || item.precio_dinero || 0),
         cantidad: Number(item.cantidad || item.cantidadDeseada || 0)
       }));
 
-      // Pasamos el total calculado global (Asientos + Candy Bar)
       const totalGeneral = this.totalPagar;
+      const uId = this.usuarioId();
 
       // --- FLUJO ANÓNIMO ---
-      if (!this.usuarioId) {
-        if (Number(this.montoIngresadoAnonimo) !== Number(totalGeneral)) {
-          alert(`El monto ingresado ($${this.montoIngresadoAnonimo}) debe ser exacto al total a pagar ($${totalGeneral}).`);
+      if (!uId) {
+        const montoIngresado = Number(this.montoIngresadoAnonimo());
+        if (montoIngresado !== Number(totalGeneral)) {
+          alert(`El monto ingresado ($${montoIngresado}) debe ser exacto al total a pagar ($${totalGeneral}).`);
           return;
         }
 
         const codigoUnico = await this.entradasService.confirmarCompraConCandy(
           null, 
-          this.misAsientos, 
+          this.misAsientos(), 
           'efectivo',
           itemsCandyParaJson,
           itemsConIdsFisicos,
@@ -250,7 +261,7 @@ export class CheckoutComponent implements OnInit {
       const { data: clienteData, error: clienteError } = await supabase
         .from('clientes')
         .select('dinero, puntos, creditos')
-        .eq('id', this.usuarioId)
+        .eq('id', uId)
         .single();
 
       if (clienteError || !clienteData) {
@@ -260,7 +271,8 @@ export class CheckoutComponent implements OnInit {
       const dineroActual = Number(clienteData.dinero || 0);
       let dineroADescontar = 0;
 
-      if (this.metodoPago === 'efectivo') {
+      const metodo = this.metodoPago();
+      if (metodo === 'efectivo') {
         if (dineroActual < totalGeneral) {
           alert(`Saldo insuficiente. Tienes $${dineroActual} y necesitas $${totalGeneral}.`);
           return;
@@ -271,16 +283,15 @@ export class CheckoutComponent implements OnInit {
         const { error: updateError } = await supabase
           .from('clientes')
           .update({ dinero: nuevoDinero })
-          .eq('id', this.usuarioId);
+          .eq('id', uId);
 
         if (updateError) throw updateError;
       }
 
-      // 🛒 Confirmamos compra general unificada pasando el total correcto
       const codigoUnico = await this.entradasService.confirmarCompraConCandy(
-        this.usuarioId, 
-        this.misAsientos, 
-        this.metodoPago,
+        uId, 
+        this.misAsientos(), 
+        metodo,
         itemsCandyParaJson,
         itemsConIdsFisicos,
         totalGeneral
@@ -298,8 +309,9 @@ export class CheckoutComponent implements OnInit {
   }
 
   volverSeleccion(): void {
-    if (this.funcionId && this.funcionId !== 'solo-candy-placeholder-id') {
-      this.router.navigate(['/seleccionar-asientos', this.funcionId]); 
+    const fId = this.funcionId();
+    if (fId && fId !== 'solo-candy-placeholder-id') {
+      this.router.navigate(['/seleccionar-asientos', fId]); 
     } else {
       this.router.navigate(['/candybar']); 
     }

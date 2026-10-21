@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FuncionesService } from '../../services/funciones';
 import { RouterLink } from '@angular/router';
@@ -11,13 +11,12 @@ import { RouterLink } from '@angular/router';
   styleUrls: ['./lista-funciones.css']
 })
 export class ListaFuncionesComponent implements OnInit {
-  funciones: any[] = [];
-  cargando: boolean = true;
+  // 🔹 Inyección moderna con inject()
+  private funcionesService = inject(FuncionesService);
 
-  constructor(
-    private funcionesService: FuncionesService,
-    private cdr: ChangeDetectorRef
-  ) {}
+  // 🔹 Definición de estados con Signals (adiós a ChangeDetectorRef)
+  funciones = signal<any[]>([]);
+  cargando = signal<boolean>(true);
 
   ngOnInit(): void {
     this.cargarTodasLasFunciones();
@@ -25,19 +24,21 @@ export class ListaFuncionesComponent implements OnInit {
 
   async cargarTodasLasFunciones(): Promise<void> {
     try {
-      this.cargando = true;
-      this.cdr.detectChanges(); // Mostramos el loading
+      this.cargando.set(true);
 
       // Traemos TODAS las funciones del sistema
-      this.funciones = await this.funcionesService.getFunciones();
-      
-      this.cdr.detectChanges(); // Actualizamos la vista con los datos
+      const data = await this.funcionesService.getFunciones();
+      this.funciones.set(data || []);
     } catch (error) {
       console.error('Error al cargar la agenda de funciones:', error);
     } finally {
-      this.cargando = false;
-      this.cdr.detectChanges(); // Ocultamos el loading
+      this.cargando.set(false);
     }
+  }
+
+  // 🔹 Función trackBy requerida para *ngFor
+  trackByFuncion(index: number, funcion: any): string {
+    return funcion.id;
   }
 
   async eliminar(funcion: any): Promise<void> {
@@ -48,9 +49,8 @@ export class ListaFuncionesComponent implements OnInit {
       try {
         await this.funcionesService.eliminarFuncion(funcion.id);
         
-        // Filtramos la lista localmente para que desaparezca de la tabla al instante sin recargar la página
-        this.funciones = this.funciones.filter(f => f.id !== funcion.id);
-        this.cdr.detectChanges();
+        // Actualizamos la señal filtrando localmente el elemento eliminado
+        this.funciones.update(lista => lista.filter(f => f.id !== funcion.id));
         
         alert('Función eliminada correctamente.');
       } catch (error: any) {

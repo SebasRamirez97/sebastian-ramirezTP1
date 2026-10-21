@@ -1,109 +1,138 @@
-@if (cargando) {
+<!-- Estado de carga con *ngIf / *ngElse -->
+<div *ngIf="cargando(); else contenidoDetalle">
   <p class="loading">Cargando detalles de la película...</p>
-} @else if (pelicula) {
-  <div class="container-detalle">
+</div>
+
+<ng-template #contenidoDetalle>
+  <div *ngIf="pelicula() as p" class="container-detalle">
+    
     <!-- ⬅️ Botón para volver al listado -->
     <div class="seccion-volver">
       <button (click)="volver()" class="btn-volver">⬅️ Volver a cartelera</button>
     </div>
-    <!-- Panel de Control para el Administrador -->
-    @if (rol === 'admin' && !modoEdicion) {
-      <div class="acciones-admin">
-        <button (click)="activarEdicion()" class="btn-editar">✏️ Editar Película</button>
-        <button (click)="eliminarPelicula()" class="btn-eliminar">🗑️ Eliminar Película</button>
-      </div>
-    }
 
-    <!-- 1. PARTE SUPERIOR: Imagen (Izquierda) y Detalles (Derecha) -->
+    <!-- Panel de Control para el Administrador -->
+    <div *ngIf="rol() === 'admin' && !modoEdicion()" class="acciones-admin">
+      <button (click)="activarEdicion()" class="btn-editar">✏️ Editar Película</button>
+      <button (click)="eliminarPelicula()" class="btn-eliminar">🗑️ Eliminar Película</button>
+    </div>
+
+    <!-- 1. PARTE SUPERIOR: Imagen y Detalles -->
     <div class="seccion-superior">
+      
       <!-- Izquierda: Imagen -->
       <div class="columna-izquierda">
         <img
-          [src]="modoEdicion ? peliculaEditada.imagen : pelicula.imagen"
-          [alt]="pelicula.nombre"
+          [src]="modoEdicion() ? peliculaEditada().imagen : p.imagen"
+          [alt]="p.nombre"
           class="poster"
         />
 
-        @if (modoEdicion) {
-          <div class="campo-edicion">
-            <label>URL de la imagen:</label>
-            <input [(ngModel)]="peliculaEditada.imagen" type="text" placeholder="https://..." />
-          </div>
-        }
+        <div *ngIf="modoEdicion()" class="campo-edicion">
+          <label>URL de la imagen:</label>
+          <input 
+            [value]="peliculaEditada().imagen || ''" 
+            (input)="actualizarCampo('imagen', $event)" 
+            type="text" 
+            placeholder="https://..." 
+          />
+        </div>
       </div>
 
       <!-- Derecha: Detalles -->
       <div class="columna-derecha">
-        @if (!modoEdicion) {
-          <h1 class="titulo-pelicula">{{ pelicula.nombre }}</h1>
-          <p class="dato"><strong>⏱️ Duración:</strong> {{ pelicula.duracion }} minutos</p>
+        
+        <div *ngIf="!modoEdicion(); else formEdicionDetalles">
+          <h1 class="titulo-pelicula">{{ p.nombre }}</h1>
+          <p class="dato"><strong>⏱️ Duración:</strong> {{ p.duracion }} minutos</p>
           <p class="dato">
-            <strong>📅 Fecha de estreno:</strong> {{ pelicula.fecha_estreno | date: 'dd/MM/yyyy' }}
+            <strong>📅 Fecha de estreno:</strong> {{ p.fecha_estreno | date: 'dd/MM/yyyy' }}
           </p>
-        } @else {
+        </div>
+
+        <ng-template #formEdicionDetalles>
           <div class="campo-edicion">
             <label>Título:</label>
-            <input [(ngModel)]="peliculaEditada.nombre" type="text" />
+            <input 
+              [value]="peliculaEditada().nombre || ''" 
+              (input)="actualizarCampo('nombre', $event)" 
+              type="text" 
+            />
           </div>
 
           <div class="campo-edicion">
             <label>Duración (minutos):</label>
-            <input [(ngModel)]="peliculaEditada.duracion" type="number" />
+            <input 
+              [value]="peliculaEditada().duracion || 0" 
+              (input)="actualizarCampo('duracion', $event)" 
+              type="number" 
+            />
           </div>
 
           <div class="campo-edicion">
             <label>Fecha de estreno:</label>
-            <input [(ngModel)]="peliculaEditada.fecha_estreno" type="date" />
+            <input 
+              [value]="peliculaEditada().fecha_estreno || ''" 
+              (input)="actualizarCampo('fecha_estreno', $event)" 
+              type="date" 
+            />
           </div>
-        }
+        </ng-template>
 
         <!-- Puntaje: NO editable por el administrador -->
         <div class="puntaje-box">
           <p class="dato">
             <strong>⭐ Puntaje:</strong>
-            {{ pelicula.puntaje ? (pelicula.puntaje | number: '1.1-2') : '0.0' }} / 5
+            {{ p.puntaje ? (p.puntaje | number: '1.1-2') : '0.0' }} / 5
           </p>
-          @if (modoEdicion) {
-            <small class="nota-no-editable"
-              >(El puntaje se calcula automáticamente con las reseñas)</small
-            >
-          }
+          <small *ngIf="modoEdicion()" class="nota-no-editable">
+            (El puntaje se calcula automáticamente con las reseñas)
+          </small>
         </div>
+
+        <!-- Botones de Guardar / Cancelar en modo edición -->
+        <div *ngIf="modoEdicion()" class="acciones-edicion-botones">
+          <button (click)="guardarCambios()" class="btn-guardar">💾 Guardar Cambios</button>
+          <button (click)="cancelarEdicion()" class="btn-cancelar">❌ Cancelar</button>
+        </div>
+
       </div>
     </div>
 
-    <!-- 2. SINOPSIS (Por debajo de la imagen y los detalles) -->
+    <!-- 2. SINOPSIS -->
     <div class="seccion-sinopsis">
       <h3>Sinopsis</h3>
-      @if (!modoEdicion) {
-        <p class="texto-sinopsis">{{ pelicula.sinopsis }}</p>
-      } @else {
+      <p *ngIf="!modoEdicion(); else edicionSinopsis" class="texto-sinopsis">{{ p.sinopsis }}</p>
+      
+      <ng-template #edicionSinopsis>
         <div class="campo-edicion">
-          <textarea [(ngModel)]="peliculaEditada.sinopsis" rows="4"></textarea>
+          <textarea 
+            [value]="peliculaEditada().sinopsis || ''" 
+            (input)="actualizarCampo('sinopsis', $event)" 
+            rows="4">
+          </textarea>
         </div>
-      }
+      </ng-template>
     </div>
 
-    <!-- 3. BOTÓN DE FUNCIONES DISPONIBLES (Debajo de la sinopsis) -->
+    <!-- 3. BOTÓN DE FUNCIONES DISPONIBLES -->
     <div class="seccion-boton-funciones">
       <button (click)="irAFunciones()" class="btn-funciones">
         🎟️ Ver funciones disponibles de esta película
       </button>
     </div>
 
-    <!-- 4. RESEÑAS (Debajo del botón) -->
+    <!-- 4. RESEÑAS -->
     <div class="seccion-resenas">
       <h3>Reseñas y Opiniones</h3>
-      @if (modoEdicion) {
-        <small class="nota-no-editable"
-          >(Las reseñas son creadas por los clientes y no se pueden editar aquí)</small
-        >
-      }
+      <small *ngIf="modoEdicion()" class="nota-no-editable">
+        (Las reseñas son creadas por los clientes y no se pueden editar aquí)
+      </small>
 
-      <!-- Contenedor de reseñas (Se poblará desde la tabla resenas) -->
       <div class="lista-resenas">
         <p class="sin-resenas">Aún no hay reseñas registradas para esta película.</p>
       </div>
     </div>
+
   </div>
-}
+</ng-template>

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -12,25 +12,39 @@ import { supabase } from '../../services/supabaseClient';
   styleUrls: ['./cargar-saldo.css']
 })
 export class CargarSaldoComponent {
-  montoACargar: number = 1000; // Valor por defecto
-  cargando: boolean = false;
+  // 🔹 Inyección de dependencias moderna con inject()
+  private router = inject(Router);
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef) {}
+  // 🔹 Definición de estados con Signals
+  montoACargar = signal<number>(1000); // Valor por defecto
+  cargando = signal<boolean>(false);
+
+  // Métodos auxiliares para actualizar o leer el monto desde el template
+  actualizarMonto(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.montoACargar.set(Number(target.value) || 0);
+  }
+
+  setMontoRapido(monto: number): void {
+    this.montoACargar.set(monto);
+  }
 
   async procesarCarga(): Promise<void> {
-    if (this.montoACargar <= 0) {
+    const monto = this.montoACargar();
+
+    if (monto <= 0) {
       alert('Por favor, ingresa un monto válido mayor a 0.');
       return;
     }
 
     try {
-      this.cargando = true;
+      this.cargando.set(true);
 
       // 1. Intentar ver si hay un usuario autenticado en Supabase
       const { data: { user }, error: authError } = await supabase.auth.getUser();
 
       if (!authError && user) {
-        // --- FLOGUEO PARA USUARIO REGISTRADO (SUPABASE) ---
+        // --- FLUJO PARA USUARIO REGISTRADO (SUPABASE) ---
         const { data: clienteData, error: fetchError } = await supabase
           .from('clientes')
           .select('dinero')
@@ -42,7 +56,7 @@ export class CargarSaldoComponent {
         }
 
         const dineroActual = clienteData?.dinero || 0;
-        const nuevoDinero = Number(dineroActual) + Number(this.montoACargar);
+        const nuevoDinero = Number(dineroActual) + Number(monto);
 
         const { error: updateError } = await supabase
           .from('clientes')
@@ -57,31 +71,25 @@ export class CargarSaldoComponent {
         
         if (!anonimoStr) {
           alert('No se encontró una sesión activa ni de usuario ni de invitado.');
-          this.router.navigate(['/']); // Redirigir al inicio o login si no hay nada
+          this.router.navigate(['/']);
           return;
         }
 
         const clienteAnonimo = JSON.parse(anonimoStr);
-        
-        // Sumar al saldo local (inicializándolo en 0 si no existía)
         const saldoActual = clienteAnonimo.dinero || 0;
-        clienteAnonimo.dinero = Number(saldoActual) + Number(this.montoACargar);
+        clienteAnonimo.dinero = Number(saldoActual) + Number(monto);
 
-        // Guardar de nuevo en el localStorage
         localStorage.setItem('clienteAnonimo', JSON.stringify(clienteAnonimo));
       }
 
-      alert(`¡Recarga exitosa! Se han acreditado $${this.montoACargar} a tu cuenta.`);
-      
-      // Redirigir de vuelta al estado del cliente, cartelera o selección de asientos
+      alert(`¡Recarga exitosa! Se han acreditado $${monto} a tu cuenta.`);
       this.router.navigate(['/estado-cliente']);
 
     } catch (error: any) {
       console.error('Error al recargar saldo:', error.message);
       alert('Hubo un error al procesar la recarga: ' + error.message);
     } finally {
-      this.cargando = false;
-      this.cdr.detectChanges();
+      this.cargando.set(false);
     }
   }
 

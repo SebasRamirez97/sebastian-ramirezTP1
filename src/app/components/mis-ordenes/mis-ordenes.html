@@ -5,150 +5,150 @@
     <p>Presenta el código QR o el código de retiro en la entrada del cine o del Candy Bar.</p>
   </div>
 
-  @if (cargando) {
-    <div class="loading-container">
-      <p class="loading">Cargando tus órdenes...</p>
-    </div>
-  } @else {
-    @if (misOrdenes.length === 0) {
+  <!-- Estado de carga con *ngIf / *ngElse -->
+  <div *ngIf="cargando(); else contenidoOrdenes" class="loading-container">
+    <p class="loading">Cargando tus órdenes...</p>
+  </div>
+
+  <ng-template #contenidoOrdenes>
+    <!-- Si no hay órdenes -->
+    <div *ngIf="misOrdenes().length === 0; else listaOrdenes">
       <div class="alert-info">
         <p>🎬 No tienes compras registradas todavía. ¡Explora la cartelera y reserva tu lugar!</p>
       </div>
-    } @else {
+    </div>
+
+    <!-- Si hay órdenes, listamos con *ngFor clásico y trackBy -->
+    <ng-template #listaOrdenes>
       <div class="grid-ordenes">
-        @for (orden of misOrdenes; track orden.id) {
-          <div class="ticket-card">
-            <!-- Sección Superior del Ticket -->
-            <div class="ticket-header">
-              <span class="badge-cine">
-                {{ orden.entradas && orden.entradas.length > 0 ? 'Cine + Candy' : 'Candy Bar' }}
-              </span>
+        <div *ngFor="let orden of misOrdenes(); trackBy: trackByOrden" class="ticket-card">
+          <!-- Sección Superior del Ticket -->
+          <div class="ticket-header">
+            <span class="badge-cine">
+              {{ orden.entradas && orden.entradas.length > 0 ? 'Cine + Candy' : 'Candy Bar' }}
+            </span>
+          </div>
+
+          <div class="ticket-body">
+            <!-- Tomamos la peli de la primera entrada asociada o indicamos compra de Candy -->
+            <div *ngIf="orden.entradas && orden.entradas.length > 0; else soloCandy">
+              <h3 class="pelicula-titulo">
+                {{ orden.entradas?.[0]?.funciones?.peliculas?.nombre || 'Película' }}
+              </h3>
             </div>
+            <ng-template #soloCandy>
+              <h3 class="pelicula-titulo">🍿 Compra de Candy Bar</h3>
+            </ng-template>
 
-            <div class="ticket-body">
-              <!-- Tomamos la peli de la primera entrada asociada o indicamos que es compra de Candy -->
-              @if (orden.entradas && orden.entradas.length > 0) {
-                <h3 class="pelicula-titulo">
-                  {{ orden.entradas?.[0]?.funciones?.peliculas?.nombre || 'Película' }}
-                </h3>
-              } @else {
-                <h3 class="pelicula-titulo">🍿 Compra de Candy Bar</h3>
-              }
-
-              <div class="ticket-detalles">
-                @if (orden.entradas && orden.entradas.length > 0) {
-                  <div class="detalle-item">
-                    <span class="label">📅 Fecha</span>
-                    <span class="valor">{{ orden.entradas?.[0]?.funciones?.fecha_inicio | date: 'dd/MM/yyyy' }}</span>
-                  </div>
-                  <div class="detalle-item">
-                    <span class="label">🕒 Hora</span>
-                    <span class="valor">{{ orden.entradas?.[0]?.funciones?.fecha_inicio | date: 'HH:mm' }} hs</span>
-                  </div>
-                  <div class="detalle-item full-width">
-                    <span class="label">🏢 Sala / Formato</span>
-                    <span class="valor">
-                      {{ orden.entradas?.[0]?.funciones?.salas?.nombre || 'Sala' }} 
-                      ({{ orden.entradas?.[0]?.funciones?.formato || 'Standard' }})
+            <div class="ticket-detalles">
+              <div *ngIf="orden.entradas && orden.entradas.length > 0">
+                <div class="detalle-item">
+                  <span class="label">📅 Fecha</span>
+                  <span class="valor">{{ orden.entradas?.[0]?.funciones?.fecha_inicio | date: 'dd/MM/yyyy' }}</span>
+                </div>
+                <div class="detalle-item">
+                  <span class="label">🕒 Hora</span>
+                  <span class="valor">{{ orden.entradas?.[0]?.funciones?.fecha_inicio | date: 'HH:mm' }} hs</span>
+                </div>
+                <div class="detalle-item full-width">
+                  <span class="label">🏢 Sala / Formato</span>
+                  <span class="valor">
+                    {{ orden.entradas?.[0]?.funciones?.salas?.nombre || 'Sala' }} 
+                    ({{ orden.entradas?.[0]?.funciones?.formato || 'Standard' }})
+                  </span>
+                </div>
+                
+                <!-- Asientos comprados con *ngFor clásico (Corregido a let isLast = last) -->
+                <div class="detalle-item full-width">
+                  <span class="label">💺 Asientos</span>
+                  <span class="valor">
+                    <span *ngFor="let entrada of orden.entradas; trackBy: trackByEntrada; let isLast = last">
+                      F: {{ entrada.fila }} - A: {{ entrada.numero_asiento }}{{ !isLast ? ', ' : '' }}
                     </span>
-                  </div>
-                  
-                  <!-- Asientos comprados -->
-                  <div class="detalle-item full-width">
-                    <span class="label">💺 Asientos</span>
-                    <span class="valor">
-                      @for (entrada of orden.entradas; track entrada.id; let last = $last) {
-                        F: {{ entrada.fila }} - A: {{ entrada.numero_asiento }}{{ !last ? ', ' : '' }}
-                      }
-                    </span>
-                  </div>
-                }
-
-                <!-- 🍿 Mostrar los nombres y detalles de los productos de Candy Bar -->
-                @if (orden.items_candy && orden.items_candy.length > 0) {
-                  <div class="detalle-item full-width candy-resumen-tarjeta">
-                    <span class="label">🍿 Productos Candy</span>
-                    <ul class="lista-candy-mini">
-                      @for (candy of orden.items_candy; track candy.nombre) {
-                        <li>{{ candy.cantidad }}x {{ candy.nombre }} (${{ (candy.precio_dinero || 0) * (candy.cantidad || 1) }})</li>
-                      }
-                    </ul>
-                  </div>
-                }
+                  </span>
+                </div>
               </div>
 
-              <div class="codigo-seccion">
-                <span class="label-codigo">Código de Retiro:</span>
-                <span class="codigo-badge">{{ orden.codigo_retiro }}</span>
+              <!-- 🍿 Mostrar los nombres y detalles de los productos de Candy Bar -->
+              <div *ngIf="orden.items_candy && orden.items_candy.length > 0" class="detalle-item full-width candy-resumen-tarjeta">
+                <span class="label">🍿 Productos Candy</span>
+                <ul class="lista-candy-mini">
+                  <li *ngFor="let candy of orden.items_candy; trackBy: trackByCandy">
+                    {{ candy.cantidad }}x {{ candy.nombre }} (${{ (candy.precio_dinero || 0) * (candy.cantidad || 1) }})
+                  </li>
+                </ul>
               </div>
             </div>
 
-            <!-- Sección Inferior / Acción -->
-            <div class="ticket-footer">
-              <button (click)="verDetallesOrden(orden)" class="btn-qr-ticket">
-                🔍 Ver QR y Detalles
-              </button>
+            <div class="codigo-seccion">
+              <span class="label-codigo">Código de Retiro:</span>
+              <span class="codigo-badge">{{ orden.codigo_retiro }}</span>
             </div>
           </div>
-        }
+
+          <!-- Sección Inferior / Acción -->
+          <div class="ticket-footer">
+            <button (click)="verDetallesOrden(orden)" class="btn-qr-ticket">
+              🔍 Ver QR y Detalles
+            </button>
+          </div>
+        </div>
       </div>
-    }
-  }
+    </ng-template>
+  </ng-template>
 
   <!-- Modal / Pantalla flotante con el QR -->
-  @if (ordenSeleccionada) {
-    <div class="modal-overlay" (click)="cerrarDetalles()">
-      <div class="modal-content" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h3>Pase Digital y Retiro</h3>
-          <button class="btn-cerrar-cruz" (click)="cerrarDetalles()">✕</button>
+  <div *ngIf="ordenSeleccionada() as os" class="modal-overlay" (click)="cerrarDetalles()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Pase Digital y Retiro</h3>
+        <button class="btn-cerrar-cruz" (click)="cerrarDetalles()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div *ngIf="os.entradas && os.entradas.length > 0; else modalSoloCandy">
+          <h4>{{ os.entradas?.[0]?.funciones?.peliculas?.nombre }}</h4>
+          <p class="modal-sub">
+            {{ os.entradas?.[0]?.funciones?.fecha_inicio | date: 'EEEE dd/MM/yyyy - HH:mm' }} hs
+          </p>
+          <p class="modal-asientos-resumen">
+            <strong>Asientos:</strong> 
+            <!-- Corregido a let isLast = last -->
+            <span *ngFor="let ent of os.entradas; trackBy: trackByEntrada; let isLast = last">
+              Fila {{ ent.fila }} Asiento {{ ent.numero_asiento }}{{ !isLast ? ', ' : '' }}
+            </span>
+          </p>
+        </div>
+        <ng-template #modalSoloCandy>
+          <h4>🍿 Retiro de Candy Bar</h4>
+          <p class="modal-sub">Compra exclusiva de productos</p>
+        </ng-template>
+
+        <!-- 🍿 Mostrar el nombre del producto detallado en el Modal -->
+        <div *ngIf="os.items_candy && os.items_candy.length > 0" class="modal-candy-detalle">
+          <strong>Snacks incluidos:</strong>
+          <ul>
+            <li *ngFor="let item of os.items_candy; trackBy: trackByCandy">
+              {{ item.cantidad }}x {{ item.nombre }}
+            </li>
+          </ul>
         </div>
 
-        <div class="modal-body">
-          @if (ordenSeleccionada.entradas && ordenSeleccionada.entradas.length > 0) {
-            <h4>{{ ordenSeleccionada.entradas?.[0]?.funciones?.peliculas?.nombre }}</h4>
-            <p class="modal-sub">
-              {{ ordenSeleccionada.entradas?.[0]?.funciones?.fecha_inicio | date: 'EEEE dd/MM/yyyy - HH:mm' }} hs
-            </p>
-            <p class="modal-asientos-resumen">
-              <strong>Asientos:</strong> 
-              @for (ent of ordenSeleccionada.entradas; track ent.id; let last = $last) {
-                Fila {{ ent.fila }} Asiento {{ ent.numero_asiento }}{{ !last ? ', ' : '' }}
-              }
-            </p>
-          } @else {
-            <h4>🍿 Retiro de Candy Bar</h4>
-            <p class="modal-sub">Compra exclusiva de productos</p>
-          }
-
-          <!-- 🍿 Mostrar el nombre del producto detallado en el Modal -->
-          @if (ordenSeleccionada.items_candy && ordenSeleccionada.items_candy.length > 0) {
-            <div class="modal-candy-detalle">
-              <strong>Snacks incluidos:</strong>
-              <ul>
-                @for (item of ordenSeleccionada.items_candy; track item.nombre) {
-                  <li>{{ item.cantidad }}x {{ item.nombre }}</li>
-                }
-              </ul>
-            </div>
-          }
-
-          <div class="qr-box">
-            <img [src]="'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + ordenSeleccionada.codigo_retiro" alt="QR de Orden">
-            
-            <p class="qr-instruccion">Presenta este código en la confitería o boletería</p>
-            
-            <div class="codigo-respaldo-box">
-              <span class="label-respaldo">Código de respaldo:</span>
-              <span class="texto-respaldo">{{ ordenSeleccionada.codigo_retiro }}</span>
-            </div>
+        <div class="qr-box">
+          <img [src]="'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + os.codigo_retiro" alt="QR de Orden">
+          
+          <p class="qr-instruccion">Presenta este código en la confitería o boletería</p>
+          
+          <div class="codigo-respaldo-box">
+            <span class="label-respaldo">Código de respaldo:</span>
+            <span class="texto-respaldo">{{ os.codigo_retiro }}</span>
           </div>
         </div>
+      </div>
 
-        <div class="modal-footer">
-          <button class="btn-cerrar-modal" (click)="cerrarDetalles()">Cerrar</button>
-        </div>
+      <div class="modal-footer">
+        <button class="btn-cerrar-modal" (click)="cerrarDetalles()">Cerrar</button>
       </div>
     </div>
-  }
+  </div>
 </div>

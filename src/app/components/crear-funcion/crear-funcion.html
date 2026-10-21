@@ -1,18 +1,14 @@
 <div class="admin-container">
   <h2>Crear Nueva Función de Cine</h2>
 
-  <!-- Alertas de Feedback -->
-  @if (mensajeExito) {
-    <div class="alert alert-success">
-      {{ mensajeExito }}
-    </div>
-  }
+  <!-- Alertas de Feedback usando *ngIf -->
+  <div *ngIf="mensajeExito()" class="alert alert-success">
+    {{ mensajeExito() }}
+  </div>
 
-  @if (mensajeError) {
-    <div class="alert alert-danger">
-      {{ mensajeError }}
-    </div>
-  }
+  <div *ngIf="mensajeError()" class="alert alert-danger">
+    {{ mensajeError() }}
+  </div>
 
   <form [formGroup]="funcionForm" (ngSubmit)="onSubmit()" class="form-funcion">
     
@@ -22,27 +18,22 @@
       <select id="pelicula_id" formControlName="pelicula_id" class="form-control">
         <option value="" disabled>Seleccione una película...</option>
         
-        @for (pelicula of peliculas; track pelicula.id) {
-          <option [value]="pelicula.id">
-            {{ pelicula.nombre }} ({{ pelicula.duracion }} min)
-          </option>
-        }
+        <!-- Bucle clásico *ngFor con la señal peliculas() y trackBy -->
+        <option *ngFor="let pelicula of peliculas(); trackBy: trackByPelicula" [value]="pelicula.id">
+          {{ pelicula.nombre }} ({{ pelicula.duracion }} min)
+        </option>
       </select>
       
-      @if (funcionForm.get('pelicula_id')?.touched && funcionForm.get('pelicula_id')?.invalid) {
-        <span class="error-text">
-          Debe seleccionar una película.
-        </span>
-      }
+      <span *ngIf="funcionForm.get('pelicula_id')?.touched && funcionForm.get('pelicula_id')?.invalid" class="error-text">
+        Debe seleccionar una película.
+      </span>
     </div>
 
     <!-- Selección de Formato -->
     <div class="form-group">
       <label for="formato">Formato:</label>
       <select id="formato" formControlName="formato" class="form-control">
-        @for (fmt of formatos; track fmt) {
-          <option [value]="fmt">{{ fmt }}</option>
-        }
+        <option *ngFor="let fmt of formatos(); trackBy: trackByFormato" [value]="fmt">{{ fmt }}</option>
       </select>
     </div>
 
@@ -56,11 +47,9 @@
         class="form-control"
       />
       
-      @if (funcionForm.get('fecha_inicio')?.touched && funcionForm.get('fecha_inicio')?.invalid) {
-        <span class="error-text">
-          La fecha y hora de inicio son requeridas.
-        </span>
-      }
+      <span *ngIf="funcionForm.get('fecha_inicio')?.touched && funcionForm.get('fecha_inicio')?.invalid" class="error-text">
+        La fecha y hora de inicio son requeridas.
+      </span>
     </div>
 
     <!-- Precio en Pesos -->
@@ -89,15 +78,9 @@
 
     <!-- Botones de Acción -->
     <div class="form-actions">
-      <!-- Es crucial usar type="button" para que no intente enviar el formulario -->
-
-
-      <button type="submit" [disabled]="funcionForm.invalid || cargando" class="btn-submit">
-        @if (!cargando) {
-          <span>Programar Función</span>
-        } @else {
-          <span>Verificando disponibilidad de sala...</span>
-        }
+      <button type="submit" [disabled]="funcionForm.invalid || cargando()" class="btn-submit">
+        <span *ngIf="!cargando(); else textoCargando">Programar Función</span>
+        <ng-template #textoCargando>Verificando disponibilidad de sala...</ng-template>
       </button>
 
       <button type="button" class="btn-cancel" (click)="onCancelar()">

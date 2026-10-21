@@ -2,7 +2,7 @@
   <h2>Menú</h2>
   <ul>
     <!-- Administrador -->
-    @if (rol === 'admin') {
+    <ng-container *ngIf="rol() === 'admin'">
       <li><a routerLink="/home">🏠 Inicio</a></li>
       <li><a routerLink="/cartelera">🎬 Cartelera</a></li>
       <li><a routerLink="/armar-cartelera">➕ Crear Película</a></li>
@@ -11,37 +11,37 @@
       <li><a routerLink="/crear-funcion">🍿 Crear Función</a></li>
       <li><a routerLink="/lista-funciones">📅 Agenda Funciones</a></li> 
       <li><a routerLink="/registrar-empleado">📝 Registrar Empleado</a></li>
-    }
+    </ng-container>
 
     <!-- Empleado -->
-    @if (rol === 'empleado') {
+    <ng-container *ngIf="rol() === 'empleado'">
       <li><a routerLink="/home">🏠 Inicio</a></li>
       <li><a routerLink="/verificar-orden">✅ Verificar Orden</a></li>
-    }
+    </ng-container>
 
     <!-- Cliente -->
-    @if (rol === 'cliente') {
+    <ng-container *ngIf="rol() === 'cliente'">
       <li><a routerLink="/home">🏠 Inicio</a></li>
       <li><a routerLink="/cartelera">🎬 Cartelera</a></li>
       <li><a routerLink="/candybar">🍿 Candy Bar </a></li>
       <li><a routerLink="/mis-ordenes">🎟️ Mis ordenes</a></li>
       <li><a routerLink="/estado-cliente">💳 Estado de Cuenta</a></li>
-    }
+    </ng-container>
 
     <!-- Anónimo -->
-    @if (rol === 'anonimo') {
+    <ng-container *ngIf="rol() === 'anonimo'">
       <li><a routerLink="/home">🏠 Inicio</a></li>
       <li><a routerLink="/cartelera">🎬 Ver Cartelera</a></li>
       <li><a routerLink="/candybar">🍿 Candy Bar </a></li>
-    }
+    </ng-container>
   </ul>
 
   <!-- Footer con lógica diferida según el tipo de usuario -->
   <div class="sidebar-footer">
-    @if (rol === 'anonimo') {
-      <button (click)="salirAnonimo()">🚪 Salir</button>
-    } @else {
+    <button *ngIf="rol() === 'anonimo'; else botonCerrarSesion" (click)="salirAnonimo()">🚪 Salir</button>
+    
+    <ng-template #botonCerrarSesion>
       <button (click)="cerrarSesion()">🚪 Cerrar sesión</button>
-    }
+    </ng-template>
   </div>
 </aside>

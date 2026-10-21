@@ -4,15 +4,14 @@
   <!-- Nombre -->
   <div>
     <input formControlName="nombre" placeholder="Nombre de la película">
-    @if (submitted && formPelicula.get('nombre')?.invalid) {
-      <div class="error">
-        @if (formPelicula.get('nombre')?.hasError('required')) {
-          Campo obligatorio incompleto
-        } @else if (formPelicula.get('nombre')?.hasError('minlength')) {
-          Debe tener al menos 2 caracteres
-        }
+    <div *ngIf="submitted() && formPelicula.get('nombre')?.invalid" class="error">
+      <div *ngIf="formPelicula.get('nombre')?.hasError('required')">
+        Campo obligatorio incompleto
       </div>
-    }
+      <div *ngIf="formPelicula.get('nombre')?.hasError('minlength')">
+        Debe tener al menos 2 caracteres
+      </div>
+    </div>
   </div>
 
   <!-- Fecha de estreno -->
@@ -24,54 +23,48 @@
       onfocus="(this.type='date')" 
       onblur="(this.value ? this.type='date' : this.type='text')">
       
-    @if (submitted && formPelicula.get('fecha_estreno')?.invalid) {
-      <div class="error">
-        Campo obligatorio incompleto
-      </div>
-    }
+    <div *ngIf="submitted() && formPelicula.get('fecha_estreno')?.invalid" class="error">
+      Campo obligatorio incompleto
+    </div>
   </div>
 
   <!-- Selección de Imagen (.jpg) -->
   <div>
     <label style="display: block; margin-bottom: 5px; font-weight: bold;">Póster de la película (.jpg / .png):</label>
     <input type="file" accept="image/jpeg, image/jpg, image/png" (change)="onFileSelected($event)">
-    @if (submitted && !selectedFile) {
-      <div class="error">
-        Debes seleccionar una imagen para la película
-      </div>
-    }
+    <div *ngIf="submitted() && !selectedFile()" class="error">
+      Debes seleccionar una imagen para la película
+    </div>
   </div>
 
   <!-- Duración -->
   <div>
     <input formControlName="duracion" type="number" placeholder="Duración en minutos (ej: 120)">
-    @if (submitted && formPelicula.get('duracion')?.invalid) {
-      <div class="error">
-        @if (formPelicula.get('duracion')?.hasError('required')) {
-          Campo obligatorio incompleto
-        } @else if (formPelicula.get('duracion')?.hasError('min')) {
-          La duración debe ser mayor a 0 minutos
-        }
+    <div *ngIf="submitted() && formPelicula.get('duracion')?.invalid" class="error">
+      <div *ngIf="formPelicula.get('duracion')?.hasError('required')">
+        Campo obligatorio incompleto
       </div>
-    }
+      <div *ngIf="formPelicula.get('duracion')?.hasError('min')">
+        La duración debe ser mayor a 0 minutos
+      </div>
+    </div>
   </div>
 
   <!-- Sinopsis -->
   <div>
     <textarea formControlName="sinopsis" placeholder="Sinopsis de la película" rows="4"></textarea>
-    @if (submitted && formPelicula.get('sinopsis')?.invalid) {
-      <div class="error">
-        @if (formPelicula.get('sinopsis')?.hasError('required')) {
-          Campo obligatorio incompleto
-        } @else if (formPelicula.get('sinopsis')?.hasError('minlength')) {
-          La sinopsis debe tener al menos 10 caracteres
-        }
+    <div *ngIf="submitted() && formPelicula.get('sinopsis')?.invalid" class="error">
+      <div *ngIf="formPelicula.get('sinopsis')?.hasError('required')">
+        Campo obligatorio incompleto
       </div>
-    }
+      <div *ngIf="formPelicula.get('sinopsis')?.hasError('minlength')">
+        La sinopsis debe tener al menos 10 caracteres
+      </div>
+    </div>
   </div>
 
-  <button type="submit" [disabled]="subiendoImagen">
-    {{ subiendoImagen ? 'Subiendo datos e imagen...' : 'Guardar Película' }}
+  <button type="submit" [disabled]="subiendoImagen()">
+    {{ subiendoImagen() ? 'Subiendo datos e imagen...' : 'Guardar Película' }}
   </button>
   <button type="button" (click)="cancelar()">Cancelar</button>
 </form>

@@ -7,24 +7,26 @@
     <input 
       type="number" 
       id="monto" 
-      [(ngModel)]="montoACargar" 
+      [value]="montoACargar()" 
+      (input)="actualizarMonto($event)"
       min="100" 
       step="100" 
       class="input-monto"
     />
   </div>
 
-  <!-- Botones de montos rápidos opcionales -->
+  <!-- Botones de montos rápidos -->
   <div class="montos-rapidos">
-    <button (click)="montoACargar = 1000">+$1,000</button>
-    <button (click)="montoACargar = 5000">+$5,000</button>
-    <button (click)="montoACargar = 10000">+$10,000</button>
+    <button (click)="setMontoRapido(1000)">+$1,000</button>
+    <button (click)="setMontoRapido(5000)">+$5,000</button>
+    <button (click)="setMontoRapido(10000)">+$10,000</button>
   </div>
 
   <div class="acciones">
     <button class="btn btn-secundario" (click)="volver()">Cancelar</button>
-    <button class="btn btn-primary" (click)="procesarCarga()" [disabled]="cargando">
-      {{ cargando ? 'Procesando...' : 'Confirmar Recarga 🚀' }}
+    <button class="btn btn-primary" (click)="procesarCarga()" [disabled]="cargando()">
+      <span *ngIf="cargando(); else textoNormal">Procesando...</span>
+      <ng-template #textoNormal>Confirmar Recarga 🚀</ng-template>
     </button>
   </div>
 </div>

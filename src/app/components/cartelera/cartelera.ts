@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core'; // 👈 1. Importa ChangeDetectorRef
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { PeliculasService } from '../../services/peliculas';
@@ -12,26 +12,29 @@ import { Pelicula } from '../../models/pelicula.model';
   styleUrls: ['./cartelera.css']
 })
 export class CarteleraComponent implements OnInit {
-  peliculas: Pelicula[] = [];
-  cargando: boolean = true;
+  // 🔹 Inyección moderna con inject()
+  private peliculasService = inject(PeliculasService);
+  private router = inject(Router);
 
-  constructor(
-    private peliculasService: PeliculasService,
-    private router: Router,
-    private cdr: ChangeDetectorRef // 👈 2. Inyéctalo aquí
-  ) {}
+  // 🔹 Definición de estados con Signals (adiós a ChangeDetectorRef)
+  peliculas = signal<Pelicula[]>([]);
+  cargando = signal<boolean>(true);
 
   async ngOnInit() {
- 
     try {
-      this.peliculas = await this.peliculasService.getPeliculas();
-     
+      this.cargando.set(true);
+      const data = await this.peliculasService.getPeliculas();
+      this.peliculas.set(data);
     } catch (error) {
-      
+      console.error('Error al cargar cartelera:', error);
     } finally {
-      this.cargando = false;
-      this.cdr.detectChanges(); // 👈 3. Fuerza a Angular a actualizar el HTML
+      this.cargando.set(false);
     }
+  }
+
+  // 🔹 Función trackBy requerida para *ngFor
+  trackByPelicula(index: number, pelicula: Pelicula): string | undefined {
+    return pelicula.id;
   }
 
   verDetalle(id?: string) {

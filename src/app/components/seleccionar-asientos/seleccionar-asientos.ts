@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EntradasService } from '../../services/entradas.services';
@@ -13,15 +13,70 @@ import { supabase } from '../../services/supabaseClient';
   styleUrls: ['./seleccionar-asientos.css'],
 })
 export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
-  funcionId: string = '';
-  funcion: any = null;
+  // 🔹 Inyección moderna con inject()
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private entradasService = inject(EntradasService);
+  private funcionesService = inject(FuncionesService);
 
-  filas: string[] = [
+  // 🔹 Definición de estados con Signals (adiós a ChangeDetectorRef)
+  funcionId = signal<string>('');
+  funcion = signal<any>(null);
+
+  filas = signal<string[]>([
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J-K',
     'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-  ];
+  ]);
 
-  asientosSeleccionados: any[] = [];
+  asientosOcupados = signal<Map<string, any>>(new Map());
+  misAsientosSeleccionados = signal<any[]>([]);
+
+  // IDs de asientos guardados localmente si es anónimo
+  private idsAsientosAnonimo: string[] = [];
+
+  // 🛡️ Control para evitar doble clic o llamadas concurrentes en el mismo asiento
+  private asientosEnProceso: Set<string> = new Set();
+
+  usuarioId = signal<string | null>(null);
+  cargando = signal<boolean>(true);
+  errorMensaje = signal<string | null>(null);
+  cantidadPermitida = signal<number>(1);
+
+  private realtimeChannel: any;
+
+  async ngOnInit(): Promise<void> {
+    const fId = this.route.snapshot.paramMap.get('funcionId') || '';
+    this.funcionId.set(fId);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      this.usuarioId.set(user.id);
+    } else {
+      const anonimoStr = localStorage.getItem('clienteAnonimo');
+      if (anonimoStr) {
+        this.usuarioId.set(null);
+        const anonimo = JSON.parse(anonimoStr);
+        this.idsAsientosAnonimo = anonimo.asientosSeleccionados || [];
+      } else {
+        this.usuarioId.set(null);
+      }
+    }
+
+    if (this.funcionId()) {
+      await this.cargarDatosFuncion();
+      await this.cargarAsientosActuales();
+      this.suscripcionRealtime();
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.realtimeChannel) {
+      supabase.removeChannel(this.realtimeChannel);
+    }
+  }
 
   obtenerBloquesFila(fila: string): { izquierda: number[]; centro: number[]; derecha: number[] } {
     if (fila === 'J-K') {
@@ -39,145 +94,92 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
     }
   }
 
-  asientosOcupados: Map<string, any> = new Map();
-  misAsientosSeleccionados: any[] = [];
-
-  // IDs de asientos guardados localmente si es anónimo
-  private idsAsientosAnonimo: string[] = [];
-
-  // 🛡️ Control para evitar doble clic o llamadas concurrentes en el mismo asiento
-  private asientosEnProceso: Set<string> = new Set();
-
-  usuarioId: string | null = null;
-  cargando: boolean = true;
-  errorMensaje: string | null = null;
-  private realtimeChannel: any;
-
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private entradasService: EntradasService,
-    private funcionesService: FuncionesService,
-    private cdr: ChangeDetectorRef,
-  ) {}
-
-  async ngOnInit(): Promise<void> {
-    this.funcionId = this.route.snapshot.paramMap.get('funcionId') || '';
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (user) {
-      this.usuarioId = user.id;
-    } else {
-      const anonimoStr = localStorage.getItem('clienteAnonimo');
-      if (anonimoStr) {
-        this.usuarioId = null;
-        const anonimo = JSON.parse(anonimoStr);
-        this.idsAsientosAnonimo = anonimo.asientosSeleccionados || [];
-      } else {
-        this.usuarioId = null;
-      }
-    }
-
-    if (this.funcionId) {
-      await this.cargarDatosFuncion();
-      await this.cargarAsientosActuales();
-      this.suscripcionRealtime();
-    }
-  }
-
-  ngOnDestroy(): void {
-    if (this.realtimeChannel) {
-      supabase.removeChannel(this.realtimeChannel);
-    }
-  }
-
   async cargarDatosFuncion(): Promise<void> {
     try {
-      this.funcion = await this.funcionesService.getFuncionPorId(this.funcionId);
+      const data = await this.funcionesService.getFuncionPorId(this.funcionId());
+      this.funcion.set(data);
     } catch (error: any) {
-      this.errorMensaje = 'No se pudo cargar la información de la función.';
+      this.errorMensaje.set('No se pudo cargar la información de la función.');
     }
   }
 
   async cargarAsientosActuales(): Promise<void> {
     try {
-      this.cargando = true;
-      const entradas = await this.entradasService.getEntradasPorFuncion(this.funcionId);
+      this.cargando.set(true);
+      const entradas = await this.entradasService.getEntradasPorFuncion(this.funcionId());
 
-      this.asientosOcupados.clear();
-      this.misAsientosSeleccionados = [];
+      const mapaOcupados = new Map<string, any>();
+      const misSeleccionadosTemp: any[] = [];
+      const uId = this.usuarioId();
 
       entradas.forEach((e) => {
         const key = `${e.fila}-${e.numero_asiento}`;
-        this.asientosOcupados.set(key, e);
+        mapaOcupados.set(key, e);
 
-        const esMio = this.usuarioId 
-          ? (e.usuario_id === this.usuarioId)
+        const esMio = uId 
+          ? (e.usuario_id === uId)
           : (this.idsAsientosAnonimo.includes(e.id));
 
-        // Si ya fue comprado, ocupado o retirado, lo consideramos tuyo/ocupado
         if (esMio && (e.estado === 'seleccionado' || e.estado === 'comprado' || e.estado === 'ocupado' || e.estado === 'retirado')) {
           if (e.estado === 'seleccionado') {
-            this.misAsientosSeleccionados.push(e);
+            misSeleccionadosTemp.push(e);
           }
         }
       });
+
+      this.asientosOcupados.set(mapaOcupados);
+      this.misAsientosSeleccionados.set(misSeleccionadosTemp);
     } catch (error: any) {
-      this.errorMensaje = error.message;
+      this.errorMensaje.set(error.message);
     } finally {
-      this.cargando = false;
-      this.cdr.detectChanges();
+      this.cargando.set(false);
     }
   }
 
   private suscripcionRealtime(): void {
     this.realtimeChannel = supabase
-      .channel(`public:entradas:funcion_id=eq.${this.funcionId}`)
+      .channel(`public:entradas:funcion_id=eq.${this.funcionId()}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'entradas',
-          filter: `funcion_id=eq.${this.funcionId}`,
+          filter: `funcion_id=eq.${this.funcionId()}`,
         },
         (payload) => {
           const newData: any = payload.new;
           const oldData: any = payload.old;
+          const mapaActual = new Map(this.asientosOcupados());
 
           if (payload.eventType === 'INSERT') {
             const key = `${newData.fila}-${newData.numero_asiento}`;
-            this.asientosOcupados.set(key, newData);
+            mapaActual.set(key, newData);
           } else if (payload.eventType === 'DELETE') {
-            for (let [key, value] of this.asientosOcupados.entries()) {
+            for (let [key, value] of mapaActual.entries()) {
               if (value.id === oldData.id) {
-                this.asientosOcupados.delete(key);
+                mapaActual.delete(key);
                 break;
               }
             }
           } else if (payload.eventType === 'UPDATE') {
             const key = `${newData.fila}-${newData.numero_asiento}`;
-            this.asientosOcupados.set(key, newData);
+            mapaActual.set(key, newData);
           }
-          this.cdr.detectChanges();
+          this.asientosOcupados.set(mapaActual);
         },
       )
       .subscribe();
   }
 
-  cantidadPermitida: number = 1;
-
   cambiarCantidad(delta: number): void {
-    const nuevaCantidad = this.cantidadPermitida + delta;
+    const nuevaCantidad = this.cantidadPermitida() + delta;
     if (nuevaCantidad >= 1) {
-      this.cantidadPermitida = nuevaCantidad;
+      this.cantidadPermitida.set(nuevaCantidad);
 
-      if (this.misAsientosSeleccionados.length > this.cantidadPermitida) {
+      if (this.misAsientosSeleccionados().length > this.cantidadPermitida()) {
         alert(
-          `Has reducido el límite a ${this.cantidadPermitida} entradas. Por favor deselecciona los sobrantes.`,
+          `Has reducido el límite a ${this.cantidadPermitida()} entradas. Por favor deselecciona los sobrantes.`,
         );
       }
     }
@@ -189,22 +191,25 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
     if (this.asientosEnProceso.has(key)) return;
     this.asientosEnProceso.add(key);
 
-    const asientoExistente = this.asientosOcupados.get(key);
+    const asientoExistente = this.asientosOcupados().get(key);
+    const uId = this.usuarioId();
 
     try {
-      const esMioExistente = this.usuarioId 
-        ? (asientoExistente?.usuario_id === this.usuarioId)
+      const esMioExistente = uId 
+        ? (asientoExistente?.usuario_id === uId)
         : (this.idsAsientosAnonimo.includes(asientoExistente?.id));
+
+      const mapaActual = new Map(this.asientosOcupados());
+      const misSelActual = [...this.misAsientosSeleccionados()];
 
       if (asientoExistente) {
         if (esMioExistente && asientoExistente.estado === 'seleccionado') {
           await this.entradasService.liberarAsiento(asientoExistente.id);
-          this.asientosOcupados.delete(key);
-          this.misAsientosSeleccionados = this.misAsientosSeleccionados.filter(
-            (a) => a.id !== asientoExistente.id,
-          );
+          mapaActual.delete(key);
+          const filtrados = misSelActual.filter((a) => a.id !== asientoExistente.id);
+          this.misAsientosSeleccionados.set(filtrados);
 
-          if (!this.usuarioId) {
+          if (!uId) {
             this.idsAsientosAnonimo = this.idsAsientosAnonimo.filter(id => id !== asientoExistente.id);
             this.actualizarLocalStorageAnonimo();
           }
@@ -212,38 +217,37 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
           alert('Este asiento ya no está disponible.');
         }
       } else {
-        if (this.misAsientosSeleccionados.length >= this.cantidadPermitida) {
+        if (misSelActual.length >= this.cantidadPermitida()) {
           alert(
-            `Solo puedes seleccionar un máximo de ${this.cantidadPermitida} entrada(s) según tu selección actual.`,
+            `Solo puedes seleccionar un máximo de ${this.cantidadPermitida()} entrada(s) según tu selección actual.`,
           );
           this.asientosEnProceso.delete(key);
           return;
         }
 
         const nuevaEntrada = await this.entradasService.bloquearAsiento(
-          this.funcionId,
-          this.usuarioId,
+          this.funcionId(),
+          uId,
           fila,
           numero,
         );
 
-        this.asientosOcupados.set(key, nuevaEntrada);
-        this.misAsientosSeleccionados.push(nuevaEntrada);
+        mapaActual.set(key, nuevaEntrada);
+        misSelActual.push(nuevaEntrada);
+        this.misAsientosSeleccionados.set(misSelActual);
 
-        if (!this.usuarioId) {
+        if (!uId) {
           this.idsAsientosAnonimo.push(nuevaEntrada.id);
           this.actualizarLocalStorageAnonimo();
         }
       }
 
-      this.cdr.markForCheck();
-      this.cdr.detectChanges();
+      this.asientosOcupados.set(mapaActual);
     } catch (error: any) {
       alert(error.message);
       await this.cargarAsientosActuales();
     } finally {
       this.asientosEnProceso.delete(key);
-      this.cdr.detectChanges();
     }
   }
 
@@ -258,7 +262,8 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
 
   obtenerObjetoClases(fila: string, numero: number): { [key: string]: boolean } {
     const key = `${fila}-${numero}`;
-    const asiento = this.asientosOcupados.get(key);
+    const asiento = this.asientosOcupados().get(key);
+    const uId = this.usuarioId();
 
     if (!asiento) {
       return {
@@ -269,14 +274,12 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
       };
     }
 
-    const esMio = this.usuarioId 
-      ? (asiento.usuario_id === this.usuarioId)
+    const esMio = uId 
+      ? (asiento.usuario_id === uId)
       : (this.idsAsientosAnonimo.includes(asiento.id));
 
     const esMioSeleccionado = esMio && asiento.estado === 'seleccionado';
-    // Consideramos comprado o retirado como tuyo si coincide tu usuario
     const esMioComprado = esMio && (asiento.estado === 'comprado' || asiento.estado === 'ocupado' || asiento.estado === 'retirado');
-    
     const ocupadoPorOtro = !esMio && (asiento.estado === 'comprado' || asiento.estado === 'seleccionado' || asiento.estado === 'ocupado' || asiento.estado === 'retirado');
     const esLibre = !esMioSeleccionado && !esMioComprado && !ocupadoPorOtro;
 
@@ -290,11 +293,12 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
 
   isAsientoDeshabilitado(fila: string, numero: number): boolean {
     const key = `${fila}-${numero}`;
-    const asiento = this.asientosOcupados.get(key);
+    const asiento = this.asientosOcupados().get(key);
     if (!asiento) return false;
 
-    const esMio = this.usuarioId 
-      ? (asiento.usuario_id === this.usuarioId)
+    const uId = this.usuarioId();
+    const esMio = uId 
+      ? (asiento.usuario_id === uId)
       : (this.idsAsientosAnonimo.includes(asiento.id));
 
     return asiento.estado === 'comprado' || 
@@ -303,17 +307,30 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
            (!esMio && asiento.estado === 'seleccionado');
   }
 
+  // 🔹 Funciones trackBy para los bucles *ngFor
+  trackByFila(index: number, fila: string): string {
+    return fila;
+  }
+
+  trackByNum(index: number, num: number): number {
+    return num;
+  }
+
+  trackByAsiento(index: number, asiento: any): string {
+    return asiento.id;
+  }
+
   async procederAlPago(): Promise<void> {
-    if (this.misAsientosSeleccionados.length === 0) {
+    if (this.misAsientosSeleccionados().length === 0) {
       alert('No tienes asientos seleccionados.');
       return;
     }
 
-    this.router.navigate(['/checkout', this.funcionId]);
+    this.router.navigate(['/checkout', this.funcionId()]);
   }
 
   volverAFunciones(): void {
-    const peliculaId = this.funcion?.pelicula_id;
+    const peliculaId = this.funcion()?.pelicula_id;
     if (peliculaId) {
       this.router.navigate(['/peliculas', peliculaId, 'funciones']);
     } else {
@@ -322,15 +339,12 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
   }
 
   irAlCandyBar(): void {
-    if (this.misAsientosSeleccionados.length === 0) {
+    if (this.misAsientosSeleccionados().length === 0) {
       alert('Por favor, selecciona al menos un asiento antes de ir al Candy Bar.');
       return;
     }
 
-    // Guardamos los asientos seleccionados reales en localStorage para que el Candy Bar / Checkout los recupere
-    localStorage.setItem('asientosSeleccionados', JSON.stringify(this.misAsientosSeleccionados));
-
-    // Redirigimos a la ruta configurada en tus rutas de Angular
+    localStorage.setItem('asientosSeleccionados', JSON.stringify(this.misAsientosSeleccionados()));
     this.router.navigate(['/candybar']);
   }
 }

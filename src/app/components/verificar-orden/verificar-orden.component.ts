@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef } from '@angular/core'; // 👈 1. Importa ChangeDetectorRef
+import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EntradasService } from '../../services/entradas.services';
@@ -11,41 +11,44 @@ import { EntradasService } from '../../services/entradas.services';
   styleUrls: ['./verificar-orden.component.css']
 })
 export class VerificarOrdenComponent {
-  codigoRetiro: string = '';
-  cargando: boolean = false;
-  mensajeExito: string | null = null;
-  mensajeError: string | null = null;
-  ordenDetalle: any = null;
+  // 🔹 Inyección moderna con inject()
+  private entradasService = inject(EntradasService);
 
-  // 👈 2. Inyecta ChangeDetectorRef en el constructor
-  constructor(
-    private entradasService: EntradasService,
-    private cdr: ChangeDetectorRef 
-  ) {}
+  // 🔹 Definición de estados con Signals (adiós a ChangeDetectorRef)
+  codigoRetiro = signal<string>('');
+  cargando = signal<boolean>(false);
+  mensajeExito = signal<string | null>(null);
+  mensajeError = signal<string | null>(null);
+  ordenDetalle = signal<any>(null);
 
-  async verificarOrden() {
-    if (!this.codigoRetiro || this.codigoRetiro.trim() === '') {
-      this.mensajeError = 'Por favor, ingrese un código de retiro.';
+  // Métodos auxiliares para manejar ngModel con Signals de manera limpia
+  actualizarCodigo(event: any): void {
+    this.codigoRetiro.set(event);
+  }
+
+  async verificarOrden(): Promise<void> {
+    const codigo = this.codigoRetiro();
+
+    if (!codigo || codigo.trim() === '') {
+      this.mensajeError.set('Por favor, ingrese un código de retiro.');
       return;
     }
 
-    this.cargando = true;
-    this.mensajeError = null;
-    this.mensajeExito = null;
-    this.ordenDetalle = null;
-    this.cdr.detectChanges(); // 👈 Forzamos la actualización visual para mostrar "Verificando..."
+    this.cargando.set(true);
+    this.mensajeError.set(null);
+    this.mensajeExito.set(null);
+    this.ordenDetalle.set(null);
 
     try {
-      const resultado = await this.entradasService.verificarYAprobarOrden(this.codigoRetiro);
-      this.ordenDetalle = resultado;
-      this.mensajeExito = `¡Orden #${resultado.codigo_retiro || this.codigoRetiro} aprobada exitosamente!`;
-      this.codigoRetiro = ''; 
+      const resultado = await this.entradasService.verificarYAprobarOrden(codigo);
+      this.ordenDetalle.set(resultado);
+      this.mensajeExito.set(`¡Orden #${resultado.codigo_retiro || codigo} aprobada exitosamente!`);
+      this.codigoRetiro.set(''); 
     } catch (error: any) {
       console.error('Error capturado:', error);
-      this.mensajeError = error.message || 'Ocurrió un error desconocido al verificar la orden.';
+      this.mensajeError.set(error.message || 'Ocurrió un error desconocido al verificar la orden.');
     } finally {
-      this.cargando = false; 
-      this.cdr.detectChanges(); // 👈 3. Forzamos a Angular a refrescar la vista para quitar el estado de carga y pintar el éxito/error
+      this.cargando.set(false); 
     }
   }
 }

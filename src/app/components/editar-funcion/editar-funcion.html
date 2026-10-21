@@ -1,17 +1,15 @@
 <div class="form-container">
   <h2>✏️ Editar Función</h2>
 
-  @if (cargando) {
+  <!-- Estado de carga con *ngIf / *ngElse -->
+  <div *ngIf="cargando(); else contenidoFormulario">
     <p class="loading">Cargando datos de la función...</p>
-  } @else {
-    
-    @if (mensajeExito) {
-      <div class="alert alert-success">{{ mensajeExito }}</div>
-    }
-    
-    @if (mensajeError) {
-      <div class="alert alert-danger">{{ mensajeError }}</div>
-    }
+  </div>
+
+  <ng-template #contenidoFormulario>
+    <!-- Alertas de éxito y error -->
+    <div *ngIf="mensajeExito()" class="alert alert-success">{{ mensajeExito() }}</div>
+    <div *ngIf="mensajeError()" class="alert alert-danger">{{ mensajeError() }}</div>
 
     <form [formGroup]="funcionForm" (ngSubmit)="onSubmit()">
       
@@ -20,9 +18,10 @@
         <label for="pelicula_id">Película</label>
         <select id="pelicula_id" formControlName="pelicula_id" class="form-control">
           <option value="" disabled>Seleccione una película</option>
-          @for (pelicula of peliculas; track pelicula.id) {
-            <option [value]="pelicula.id">{{ pelicula.nombre }}</option>
-          }
+          <!-- Bucle *ngFor clásico utilizando la signal peliculas() y trackBy -->
+          <option *ngFor="let pelicula of peliculas(); trackBy: trackByPelicula" [value]="pelicula.id">
+            {{ pelicula.nombre }}
+          </option>
         </select>
       </div>
 
@@ -30,9 +29,7 @@
       <div class="form-group">
         <label for="formato">Formato</label>
         <select id="formato" formControlName="formato" class="form-control">
-          @for (fmt of formatos; track fmt) {
-            <option [value]="fmt">{{ fmt }}</option>
-          }
+          <option *ngFor="let fmt of formatos(); trackBy: trackByFormato" [value]="fmt">{{ fmt }}</option>
         </select>
       </div>
 
@@ -57,12 +54,12 @@
 
       <!-- Botones de Acción -->
       <div class="form-actions">
-        <button type="submit" class="btn btn-primary" [disabled]="guardando">
-          {{ guardando ? 'Guardando...' : 'Actualizar Función' }}
+        <button type="submit" class="btn btn-primary" [disabled]="guardando()">
+          {{ guardando() ? 'Guardando...' : 'Actualizar Función' }}
         </button>
         <button type="button" class="btn btn-secondary" routerLink="/lista-funciones">Cancelar</button>
       </div>
 
     </form>
-  }
+  </ng-template>
 </div>

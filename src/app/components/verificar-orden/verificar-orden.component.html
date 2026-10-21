@@ -6,36 +6,32 @@
     <div class="input-grupo">
       <input 
         type="text" 
-        [(ngModel)]="codigoRetiro" 
+        [ngModel]="codigoRetiro()" 
+        (ngModelChange)="actualizarCodigo($event)"
         placeholder="Ej: A3F9B2" 
         maxlength="10"
         (keyup.enter)="verificarOrden()"
       />
-      <button (click)="verificarOrden()" [disabled]="cargando">
-        {{ cargando ? 'Verificando...' : 'Aprobar Orden' }}
+      <button (click)="verificarOrden()" [disabled]="cargando()">
+        {{ cargando() ? 'Verificando...' : 'Aprobar Orden' }}
       </button>
     </div>
 
-    <!-- Mensajes de Error -->
-    @if (mensajeError) {
-      <div class="alerta error">
-        ❌ {{ mensajeError }}
-      </div>
-    }
+    <!-- Mensajes de Error con *ngIf -->
+    <div *ngIf="mensajeError() as err" class="alerta error">
+      ❌ {{ err }}
+    </div>
 
-    <!-- Mensajes de Éxito -->
-    @if (mensajeExito) {
-      <div class="alerta exito">
-        ✅ {{ mensajeExito }}
-        @if (ordenDetalle) {
-          <div class="detalle-orden">
-            <p><strong>ID de Orden:</strong> {{ ordenDetalle.id }}</p>
-            <p><strong>Método de Pago:</strong> {{ ordenDetalle.metodo_pago }}</p>
-            <p><strong>Total:</strong> ${{ ordenDetalle.total }}</p>
-            <p><strong>Estado Actual:</strong> <span class="badge aprobado">APROBADO</span></p>
-          </div>
-        }
+    <!-- Mensajes de Éxito con *ngIf -->
+    <div *ngIf="mensajeExito() as exito" class="alerta exito">
+      ✅ {{ exito }}
+      
+      <div *ngIf="ordenDetalle() as det" class="detalle-orden">
+        <p><strong>ID de Orden:</strong> {{ det.id }}</p>
+        <p><strong>Método de Pago:</strong> {{ det.metodo_pago }}</p>
+        <p><strong>Total:</strong> ${{ det.total }}</p>
+        <p><strong>Estado Actual:</strong> <span class="badge aprobado">APROBADO</span></p>
       </div>
-    }
+    </div>
   </div>
 </div>

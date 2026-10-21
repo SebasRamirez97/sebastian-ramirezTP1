@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { FormGroup, FormControl, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
@@ -25,8 +25,6 @@ export function mayorDeEdadValidator(edadMinima: number): ValidatorFn {
   };
 }
 
-
-
 @Component({
   selector: 'app-register',
   standalone: true,
@@ -35,41 +33,47 @@ export function mayorDeEdadValidator(edadMinima: number): ValidatorFn {
   styleUrls: ['./register.component.css']
 })
 export class RegisterComponent {
+  // 🔹 Inyección moderna con inject()
+  private authService = inject(AuthService);
+  private router = inject(Router);
+
+  // 🔹 Definición de estado con Signals
+  submitted = signal<boolean>(false);
+
   // 🔹 Definición del formulario reactivo
   formCliente = new FormGroup({
     email: new FormControl('', [Validators.required, Validators.email]),
     password: new FormControl('', [Validators.required, Validators.minLength(6)]),
     nombre: new FormControl('', [Validators.required, Validators.minLength(3)]),
     apellido: new FormControl('', [Validators.required]),
-    fechaNacimiento: new FormControl('', [Validators.required,mayorDeEdadValidator(13)]),
+    fechaNacimiento: new FormControl('', [Validators.required, mayorDeEdadValidator(13)]),
     tipoSangre: new FormControl('', [Validators.required]),
     colorOjos: new FormControl('', [Validators.required]),
     vacaciones: new FormControl('', [Validators.required, Validators.min(0)])
   });
 
-  constructor(private authService: AuthService, private router: Router) {}
-  submitted = false;
-  async registrarCliente() {
-    this.submitted = true;
-  if (this.formCliente.invalid) {
-    this.formCliente.markAllAsTouched(); // 👈 fuerza mostrar errores
-    return; // no envía nada
+  async registrarCliente(): Promise<void> {
+    this.submitted.set(true);
+
+    if (this.formCliente.invalid) {
+      this.formCliente.markAllAsTouched(); // 👈 fuerza mostrar errores
+      return; // no envía nada
+    }
+
+    try {
+      const cliente = this.formCliente.value;
+      const res = await this.authService.signUpCliente(cliente as any);
+      console.log('Cliente registrado:', res);
+      this.router.navigate(['/login']);
+    } catch (err: any) {
+      console.error('Error en registro:', err.message);
+      alert('Error al registrar cliente');
+    }
   }
 
-  try {
-    const cliente = this.formCliente.value;
-    const res = await this.authService.signUpCliente(cliente as any);
-    console.log('Cliente registrado:', res);
+  volverAlLogin(): void {
+    this.submitted.set(false); // 👈 Reinicia la bandera
+    this.formCliente.reset();
     this.router.navigate(['/login']);
-  } catch (err: any) {
-    console.error('Error en registro:', err.message);
-    alert('Error al registrar cliente');
   }
-}
-
-  volverAlLogin() {
-  this.submitted = false; // 👈 Reinicia la bandera
-  this.formCliente.reset();
-  this.router.navigate(['/login']);
-}
 }
