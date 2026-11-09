@@ -1,0 +1,113 @@
+<div class="card tabla-card p-4">
+  <h4 class="mb-3 fw-bold">Gestión y Listado de Cupones</h4>
+
+  <!-- Alerta de feedback general -->
+  <div *ngIf="mensajeFeedback()" class="alert" [ngClass]="esError() ? 'alert-danger' : 'alert-success'" role="alert">
+    {{ mensajeFeedback() }}
+  </div>
+
+  <div *ngIf="cargando(); else tablaContenido" class="text-center py-4">
+    <p class="text-muted">Cargando cupones...</p>
+  </div>
+
+  <ng-template #tablaContenido>
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Tipo</th>
+            <th>Descuento</th>
+            <th>Edad Mín.</th>
+            <th>Vigencia / Fechas</th>
+            <th>Estado</th>
+            <th class="text-end">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let cupon of cupones(); trackBy: trackByCupon">
+            <td><strong>{{ cupon.code }}</strong></td>
+            <td>
+              <span class="badge bg-secondary badge-tipo">{{ cupon.tipo || 'Promocional' }}</span>
+            </td>
+            <td>{{ cupon.discount_percentage }}%</td>
+            <td>{{ cupon.min_age ? cupon.min_age + ' años' : 'General' }}</td>
+            <td>
+              <!-- 🌟 Aplicando el pipe dateFormat aquí -->
+              <span *ngIf="cupon.fecha_inicio && cupon.fecha_fin">
+                {{ cupon.fecha_inicio | dateFormat }} al {{ cupon.fecha_fin | dateFormat }}
+              </span>
+              <span *ngIf="cupon.fecha_especifica">
+                Especial: {{ cupon.fecha_especifica | dateFormat }}
+              </span>
+              <span *ngIf="!cupon.fecha_inicio && !cupon.fecha_especifica && !cupon.fecha_especifica" class="text-muted">Permanente</span>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="cupon.active !== false ? 'bg-success' : 'bg-danger'">
+                {{ cupon.active !== false ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
+            <td class="text-end acciones-cell">
+              <button class="btn btn-sm btn-outline-primary me-1" (click)="abrirModalEdicion(cupon)">✏️ Editar</button>
+              <button class="btn btn-sm me-1" [ngClass]="cupon.active !== false ? 'btn-outline-warning' : 'btn-outline-success'" (click)="toggleEstadoCupon(cupon)">
+                {{ cupon.active !== false ? 'Inhabilitar' : 'Activar' }}
+              </button>
+              <button class="btn btn-sm btn-outline-danger" (click)="eliminarCupon(cupon.id)">🗑️</button>
+            </td>
+          </tr>
+          <tr *ngIf="cupones().length === 0">
+            <td colspan="7" class="text-center text-muted py-4">No hay cupones creados en el sistema.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-template>
+</div>
+
+<!-- MODAL DE EDICIÓN AVANZADA MEJORADO -->
+<div class="modal fade show d-block modal-backdrop-custom" tabindex="-1" role="dialog" *ngIf="mostrarModalEdicion()">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content modal-content-custom" *ngIf="cuponSeleccionado() as c">
+      <div class="modal-header bg-primary text-white px-4 py-3">
+        <h5 class="modal-title fw-bold">✏️ Editar Cupón: {{ c.code }}</h5>
+        <button type="button" class="btn-close btn-close-white" (click)="cerrarModalEdicion()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="mb-3">
+          <label class="form-label">Descuento (%)</label>
+          <input type="number" class="form-control" [(ngModel)]="c.discount_percentage" min="1" max="100">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Edad Mínima Requerida (Ej: 50 para adultos mayores)</label>
+          <input type="number" class="form-control" [(ngModel)]="c.min_age" placeholder="Sin restricción">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Tipo de Cupón</label>
+          <select class="form-select" [(ngModel)]="c.tipo">
+            <option value="cumpleaños">Cumpleaños</option>
+            <option value="entre_fechas">Rango Entre Fechas</option>
+            <option value="fecha_especial">Fecha Especial</option>
+          </select>
+        </div>
+
+        <div class="mb-3" *ngIf="c.tipo === 'entre_fechas'">
+          <label class="form-label">Fecha de Inicio</label>
+          <input type="date" class="form-control" [(ngModel)]="c.fecha_inicio">
+          <label class="form-label mt-2">Fecha de Fin</label>
+          <input type="date" class="form-control" [(ngModel)]="c.fecha_fin">
+        </div>
+
+        <div class="mb-3" *ngIf="c.tipo === 'fecha_especial'">
+          <label class="form-label">Fecha Específica</label>
+          <input type="date" class="form-control" [(ngModel)]="c.fecha_especifica">
+        </div>
+      </div>
+      <div class="modal-footer bg-light border-0 px-4 py-3">
+        <button type="button" class="btn btn-secondary px-4" (click)="cerrarModalEdicion()">Cancelar</button>
+        <button type="button" class="btn btn-primary px-4 fw-bold" (click)="guardarCambiosCupon()">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+</div>

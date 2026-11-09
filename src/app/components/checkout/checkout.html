@@ -23,8 +23,42 @@
         </ul>
       </div>
 
+      <!-- 🎟️ Sección de Cupones Aplicados en el Resumen -->
+      <div *ngIf="cuponesAplicados().length > 0" class="cupones-aplicados-resumen mt-3 p-2 bg-light border rounded">
+        <h6 class="fw-bold text-success mb-1">🎟️ Cupones Aplicados:</h6>
+        <ul class="mb-0 ps-3 small">
+          <li *ngFor="let cupon of cuponesAplicados()">
+            Código: <strong>{{ cupon.code }}</strong> ({{ cupon.discount_percentage }}% de descuento)
+          </li>
+        </ul>
+      </div>
+
       <hr />
       <p class="precio-total"><strong>Total a pagar:</strong> ${{ totalPagar | number:'1.2-2' }} (o {{ totalPuntos }} Pts)</p>
+    </div>
+
+    <!-- 🎟️ Input para ingresar y aplicar nuevos cupones -->
+    <div class="seccion-cupon card p-3 mb-4 shadow-sm bg-light">
+      
+
+      <!-- 🌟 SECCIÓN DE CUPONES DISPONIBLES EN LA CUENTA DEL CLIENTE -->
+      <div *ngIf="usuarioId() !== null && cuponesDisponiblesCliente().length > 0" class="mt-3">
+        <small class="text-muted d-block mb-2">🎁 Cupones disponibles en tu cuenta (haz clic para aplicar):</small>
+        <div class="d-flex flex-wrap gap-2">
+          <button 
+            type="button" 
+            class="btn btn-sm btn-outline-secondary rounded-pill"
+            *ngFor="let cupon of cuponesDisponiblesCliente()"
+            (click)="seleccionarCuponRapido(cupon.code)">
+            <strong>{{ cupon.code }}</strong> ({{ cupon.discount_percentage }}% OFF)
+          </button>
+        </div>
+      </div>
+
+      <!-- Feedback de errores o éxitos de cupones -->
+      <div *ngIf="mensajeCupon()" class="small mt-2" [ngClass]="esErrorCupon() ? 'text-danger fw-bold' : 'text-success fw-bold'">
+        {{ mensajeCupon() }}
+      </div>
     </div>
 
     <!-- Opciones de pago para usuarios registrados -->
@@ -83,4 +117,84 @@
       <button class="btn btn-primary" (click)="confirmarPagoFinal()">Confirmar y Pagar 🎟️</button>
     </div>
   </ng-template>
+</div>
+
+<!-- 🛑 MODAL DE ÉXITO DE PAGO -->
+<div class="modal fade" [ngClass]="{'show d-block': mostrarModalExito()}" tabindex="-1" role="dialog" style="background: rgba(0,0,0,0.5);" *ngIf="mostrarModalExito()">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content shadow-lg">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">¡Pago Exitoso! 🎉</h5>
+      </div>
+      <div class="modal-body text-center py-4">
+        <div class="fs-1 mb-2">🎟️</div>
+        <p class="fs-5 mb-2">Tu entrada y comprobante en PDF se han descargado correctamente.</p>
+        <p class="text-muted small">Tu código de retiro único es:</p>
+        <h3 class="text-primary fw-bold">{{ codigoRetiroExitoso() }}</h3>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-success px-5" (click)="finalizarYRedirigir()">Ir al Inicio</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🛑 MODAL DE SALDO INSUFICIENTE -->
+<div class="modal-backdrop-custom" *ngIf="mostrarModalSaldoInsuficiente()">
+  <div class="modal-dialog-centered-custom">
+    <div class="modal-content-custom">
+      <div class="modal-header-custom">
+        <h5>⚠️ Saldo Insuficiente</h5>
+      </div>
+      <div class="modal-body-custom">
+        <div style="font-size: 3rem;" class="mb-3">💳</div>
+        <p class="mb-1 text-secondary">Tu saldo actual es de:</p>
+        <h4 class="text-danger fw-bold mb-2">${{ saldoActualCliente() | number:'1.2-2' }}</h4>
+        <p class="small text-muted mb-4">El total de tu compra es de <strong>${{ totalPagar | number:'1.2-2' }}</strong>.</p>
+        
+        <div class="bg-light border border-light-subtle rounded-3 p-3 text-start mb-3 shadow-sm">
+          <label for="montoCarga" class="form-label small fw-bold text-dark">Monto a cargar en tu cuenta ($):</label>
+          <input 
+            type="number" 
+            id="montoCarga" 
+            class="form-control form-control-sm" 
+            [ngModel]="montoACargarInput()" 
+            (ngModelChange)="montoACargarInput.set($event)"
+            min="0"
+          />
+          <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">Sugerimos cargar al menos el monto faltante.</small>
+        </div>
+
+        <div *ngIf="mensajeErrorCarga()" class="text-danger small fw-bold mt-2">
+          {{ mensajeErrorCarga() }}
+        </div>
+      </div>
+      <div class="modal-footer-custom">
+        <button type="button" class="btn btn-light border px-4 rounded-pill" (click)="cerrarModalSaldo()">Cancelar</button>
+        <button type="button" class="btn btn-warning px-4 rounded-pill fw-bold text-dark" (click)="cargarSaldoYContinuar()">Cargar y Pagar 🚀</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🎉 MODAL DE ÉXITO DE PAGO -->
+<div class="modal-backdrop-custom" *ngIf="mostrarModalExito()">
+  <div class="modal-dialog-centered-custom">
+    <div class="modal-content-custom">
+      <div class="modal-header-custom success">
+        <h5>¡Pago Exitoso! 🎉</h5>
+      </div>
+      <div class="modal-body-custom">
+        <div style="font-size: 3.5rem;" class="mb-2">🎟️</div>
+        <p class="mb-2 text-secondary">Tu entrada y comprobante en PDF se han descargado correctamente.</p>
+        <p class="text-muted small mb-1">Tu código de retiro único es:</p>
+        <div class="bg-light p-3 rounded-3 border">
+          <h2 class="text-success fw-bold m-0 tracking-wider">{{ codigoRetiroExitoso() }}</h2>
+        </div>
+      </div>
+      <div class="modal-footer-custom">
+        <button type="button" class="btn btn-success px-5 rounded-pill fw-bold shadow-sm" (click)="finalizarYRedirigir()">Ir al Inicio</button>
+      </div>
+    </div>
+  </div>
 </div>

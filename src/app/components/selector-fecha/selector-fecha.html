@@ -1,0 +1,32 @@
+<div class="selector-fecha-wrapper">
+  
+  <!-- Columna Día -->
+  <div class="campo-fecha">
+    <label class="form-label-custom">Día</label>
+    <select class="form-select" [(ngModel)]="dia" (change)="emitirFecha()">
+      <option value="" disabled selected>Día</option>
+      <option *ngFor="let d of diasDisponibles" [value]="d" [disabled]="d > maxDias">
+        {{ d }}
+      </option>
+    </select>
+  </div>
+
+  <!-- Columna Mes -->
+  <div class="campo-fecha">
+    <label class="form-label-custom">Mes</label>
+    <select class="form-select" [(ngModel)]="mes" (change)="onMesChange()">
+      <option value="" disabled selected>Mes</option>
+      <option *ngFor="let m of meses" [value]="m.id">{{ m.nombre }}</option>
+    </select>
+  </div>
+
+  <!-- Columna Año -->
+  <div class="campo-fecha">
+    <label class="form-label-custom">Año</label>
+    <select class="form-select" [(ngModel)]="anio" (change)="onAnioChange()">
+      <option value="" disabled selected>Año</option>
+      <option *ngFor="let a of aniosDisponibles" [value]="a">{{ a }}</option>
+    </select>
+  </div>
+
+</div>

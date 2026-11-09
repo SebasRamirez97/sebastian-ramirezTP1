@@ -1,0 +1,157 @@
+.cupon-card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+}
+
+.cupon-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #eee;
+  padding: 16px 20px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.form-label {
+  font-weight: 500;
+  color: #495057;
+}
+
+.form-control, .form-select {
+  border-radius: 8px;
+  padding: 10px 14px;
+  border: 1px solid #ced4da;
+}
+
+.form-control:focus, .form-select:focus {
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+
+.btn-guardar {
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-weight: 600;
+}
+
+/* 🌟 Estilos modernos para el Modal de Pantalla Completa tipo Cartel */
+/* 🌟 Fondo difuminado de pantalla completa */
+.modal-backdrop-custom {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+/* 📋 Estilo cartel blanco flotante */
+.modal-content-custom {
+  background-color: #ffffff;
+  color: #212529;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 440px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  animation: scaleUp 0.25s ease-in-out;
+  overflow: hidden;
+  text-align: center;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Cabecera del cartel */
+.modal-header-custom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 10px 24px;
+}
+
+.modal-title-custom {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+/* Botón de cierre (X) */
+.btn-close-custom {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: #adb5bd;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.btn-close-custom:hover {
+  color: #495057;
+}
+
+/* Cuerpo del cartel */
+.modal-body-custom {
+  padding: 15px 30px 25px 30px;
+}
+
+.modal-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.modal-text {
+  font-size: 1rem;
+  color: #6c757d;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Pie del cartel con el botón rojo */
+.modal-footer-custom {
+  padding: 15px 24px 25px 24px;
+  display: flex;
+  justify-content: center;
+}
+
+/* 🔴 Botón rojo elegante */
+.btn-rojo-accion {
+  background-color: #dc3545;
+  border: none;
+  color: #ffffff;
+  padding: 12px 35px;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+  transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+  width: 100%;
+  max-width: 200px;
+}
+
+.btn-rojo-accion:hover {
+  background-color: #bb2d3b;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(220, 53, 69, 0.4);
+}
+
+.btn-rojo-accion:active {
+  transform: translateY(0);
+}
+
+/* Animaciones fluidas */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

@@ -3,42 +3,59 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EntradasService } from '../../services/entradas.services';
-import { ProductosService } from '../../services/productos.service'; 
+import { ProductosService } from '../../services/productos.service';
 import { supabase } from '../../services/supabaseClient';
+import { PdfService } from '../../services/pdf.service';
+import { AdminCuponesService } from '../../services/admin-cupones.service';
 
 @Component({
   selector: 'app-checkout',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './checkout.html',
-  styleUrls: ['./checkout.css']
+  styleUrls: ['./checkout.css'],
 })
 export class CheckoutComponent implements OnInit {
-  // 🔹 Inyección moderna con inject()
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private entradasService = inject(EntradasService);
   private productosService = inject(ProductosService);
+  private pdfService = inject(PdfService);
+  private adminCuponesService = inject(AdminCuponesService);
 
-  // 🔹 Declaración de estados con Signals (adiós a ChangeDetectorRef)
   funcionId = signal<string>('');
   usuarioId = signal<string | null>(null);
   misAsientos = signal<any[]>([]);
   cargando = signal<boolean>(true);
   montoIngresadoAnonimo = signal<number>(0);
-  
+
   funcionData = signal<any>({
     precio_pesos: 0,
-    precio_puntos: 0
+    precio_puntos: 0,
   });
-  
+
   metodoPago = signal<string>('efectivo');
   creditosAUsar = signal<number>(0);
 
-  // 🍬 Items de Candy Bar seleccionados
   itemsCandySeleccionados = signal<any[]>([]);
 
-  // IDs locales si es anónimo
+  mostrarModalExito = signal<boolean>(false);
+  codigoRetiroExitoso = signal<string>('');
+
+  // 🌟 Estados para el modal de saldo insuficiente
+  mostrarModalSaldoInsuficiente = signal<boolean>(false);
+  saldoActualCliente = signal<number>(0);
+  montoFaltante = signal<number>(0);
+  montoACargarInput = signal<number>(0);
+  mensajeErrorCarga = signal<string>('');
+
+  codigoCuponInput = signal<string>('');
+  cuponesAplicados = signal<any[]>([]);
+  mensajeCupon = signal<string>('');
+  esErrorCupon = signal<boolean>(false);
+
+  cuponesDisponiblesCliente = signal<any[]>([]);
+
   private idsAsientosAnonimo: string[] = [];
 
   async ngOnInit(): Promise<void> {
@@ -46,7 +63,6 @@ export class CheckoutComponent implements OnInit {
     this.funcionId.set(idParam);
 
     let candyTemp: any[] = [];
-    // 🍬 1. Intentamos recuperar del localStorage el carrito temporal del Candy Bar
     const storedCandy = localStorage.getItem('carritoCandyTemp');
     if (storedCandy) {
       try {
@@ -54,28 +70,28 @@ export class CheckoutComponent implements OnInit {
         candyTemp = parsed.map((item: any) => ({
           ...item,
           precio: Number(item.precio || item.precio_dinero || 0),
-          cantidad: Number(item.cantidad || item.cantidadDeseada || 1)
+          cantidad: Number(item.cantidad || item.cantidadDeseada || 1),
         }));
       } catch (e) {
         candyTemp = [];
       }
     }
 
-    // 🍬 2. Si no hay nada en localStorage, probamos el servicio
     if (candyTemp.length === 0) {
       const serviceItems = this.productosService.obtenerCarritoTemp();
       candyTemp = serviceItems.map((item: any) => ({
         ...item,
         precio: Number(item.precio || item.precio_dinero || 0),
-        cantidad: Number(item.cantidad || item.cantidadDeseada || 1)
+        cantidad: Number(item.cantidad || item.cantidadDeseada || 1),
       }));
     }
     this.itemsCandySeleccionados.set(candyTemp);
 
     const { data: authData } = await supabase.auth.getUser();
-    
+
     if (authData?.user) {
       this.usuarioId.set(authData.user.id);
+      await this.cargarCuponesDelCliente(authData.user.id);
     } else {
       this.usuarioId.set(null);
       const anonimoStr = localStorage.getItem('clienteAnonimo');
@@ -85,7 +101,6 @@ export class CheckoutComponent implements OnInit {
       }
     }
 
-    // 🎟️ 3. Respaldamos/recuperamos los asientos seleccionados si no vinieron por parámetro
     if (!this.funcionId() || this.funcionId() === 'solo-candy-placeholder-id') {
       const asientosLocal = localStorage.getItem('asientosSeleccionados');
       if (asientosLocal) {
@@ -102,22 +117,88 @@ export class CheckoutComponent implements OnInit {
     await this.cargarDatosCheckout();
   }
 
+  async cargarCuponesDelCliente(userId: string): Promise<void> {
+    const { data, error } = await this.adminCuponesService.obtenerCuponesDelCliente(userId);
+    if (!error && data) {
+      this.cuponesDisponiblesCliente.set(data);
+    }
+  }
+
+  async seleccionarCuponRapido(code: string): Promise<void> {
+    this.mensajeCupon.set('');
+    this.esErrorCupon.set(false);
+
+    const cuponEncontrado = this.cuponesDisponiblesCliente().find(c => c.code.toUpperCase() === code.toUpperCase());
+    
+    if (!cuponEncontrado) {
+      this.codigoCuponInput.set(code);
+      await this.aplicarCupon();
+      return;
+    }
+
+    const actuales = this.cuponesAplicados();
+    const yaAplicado = actuales.find(c => c.code.toUpperCase() === code.toUpperCase());
+
+    if (yaAplicado) {
+      const filtrados = actuales.filter(c => c.code.toUpperCase() !== code.toUpperCase());
+      this.cuponesAplicados.set(filtrados);
+      this.mensajeCupon.set(`Cupón "${code}" desactivado.`);
+      return;
+    }
+
+    const resultado = await this.adminCuponesService.validarCuponParaUsuario(
+      code, 
+      this.usuarioId(), 
+      actuales.filter(c => c.is_welcome || c.tipo === 'bienvenida')
+    );
+
+    if (!resultado.valido) {
+      this.esErrorCupon.set(true);
+      this.mensajeCupon.set(resultado.mensaje);
+      return;
+    }
+
+    const nuevoCupón = resultado.cupon;
+    const esNuevoBienvenida = nuevoCupón.is_welcome || nuevoCupón.tipo === 'bienvenida';
+
+    let nuevaLista = [...actuales];
+
+    if (esNuevoBienvenida) {
+      if (nuevaLista.some(c => c.is_welcome || c.tipo === 'bienvenida')) {
+        this.esErrorCupon.set(true);
+        this.mensajeCupon.set('Ya has aplicado el cupón de bienvenida.');
+        return;
+      }
+      nuevaLista.push(nuevoCupón);
+    } else {
+      nuevaLista = nuevaLista.filter(c => c.is_welcome || c.tipo === 'bienvenida');
+      nuevaLista.push(nuevoCupón);
+    }
+
+    if (nuevaLista.length > 2) {
+      this.esErrorCupon.set(true);
+      this.mensajeCupon.set('Solo puedes aplicar un máximo de dos cupones.');
+      return;
+    }
+
+    this.cuponesAplicados.set(nuevaLista);
+    this.codigoCuponInput.set('');
+    this.mensajeCupon.set(`¡Cupón "${nuevoCupón.code}" aplicado con éxito! (${nuevoCupón.discount_percentage}% desc)`);
+  }
+
   async cargarDatosCheckout(): Promise<void> {
     try {
       this.cargando.set(true);
-
       if (!this.funcionId() || this.funcionId() === 'solo-candy-placeholder-id') {
         if (this.misAsientos().length === 0) {
           this.cargando.set(false);
           return;
         }
       }
-
       await this.cargarDetalleFuncion();
       await this.cargarAsientosSeleccionados();
-
     } catch (error: any) {
-      alert('Hubo un error al cargar el resumen de compra: ' + error.message);
+      console.error('Hubo un error al cargar el resumen de compra: ' + error.message);
     } finally {
       this.cargando.set(false);
     }
@@ -146,7 +227,7 @@ export class CheckoutComponent implements OnInit {
     if (!fId) return;
 
     const todasLasEntradas = await this.entradasService.getEntradasPorFuncion(fId);
-    
+
     if (!todasLasEntradas) {
       this.misAsientos.set([]);
       return;
@@ -155,18 +236,19 @@ export class CheckoutComponent implements OnInit {
     const uId = this.usuarioId();
     if (uId) {
       const filtrados = todasLasEntradas.filter(
-        e => e.usuario_id === uId && (e.estado === 'seleccionado' || e.estado === 'ocupado')
+        (e) => e.usuario_id === uId && (e.estado === 'seleccionado' || e.estado === 'ocupado'),
       );
       this.misAsientos.set(filtrados);
     } else {
       const filtrados = todasLasEntradas.filter(
-        e => this.idsAsientosAnonimo.includes(e.id) && (e.estado === 'seleccionado' || e.estado === 'ocupado')
+        (e) =>
+          this.idsAsientosAnonimo.includes(e.id) &&
+          (e.estado === 'seleccionado' || e.estado === 'ocupado'),
       );
       this.misAsientos.set(filtrados);
     }
   }
 
-  // 🧮 CÁLCULOS DE TOTALES UNIFICADOS
   get totalEntradasPesos(): number {
     const precio = Number(this.funcionData()?.precio_pesos || 0);
     return Number(this.misAsientos()?.length || 0) * precio;
@@ -179,85 +261,103 @@ export class CheckoutComponent implements OnInit {
 
   get totalCandyPesos(): number {
     const items = this.itemsCandySeleccionados();
-    if (!items || items.length === 0) {
-      return 0;
-    }
+    if (!items || items.length === 0) return 0;
     return items.reduce((acc, item) => {
       const precio = Number(item.precio || item.precio_dinero || 0);
       const cantidad = Number(item.cantidad || item.cantidadDeseada || 0);
-      return acc + (precio * cantidad);
+      return acc + precio * cantidad;
     }, 0);
   }
 
   get totalCandyPuntos(): number {
     const items = this.itemsCandySeleccionados();
-    if (!items || items.length === 0) {
-      return 0;
-    }
+    if (!items || items.length === 0) return 0;
     return items.reduce((acc, item) => {
       const puntos = Number(item.precio_puntos || 0);
       const cantidad = Number(item.cantidad || item.cantidadDeseada || 0);
-      return acc + (puntos * cantidad);
+      return acc + puntos * cantidad;
     }, 0);
   }
 
   get totalPagar(): number {
-    return this.totalEntradasPesos + this.totalCandyPesos;
+    const subtotalEntradas = this.totalEntradasPesos;
+    const subtotalCandy = this.totalCandyPesos;
+    const subtotalBruto = subtotalEntradas + subtotalCandy;
+
+    const cupones = this.cuponesAplicados();
+    if (cupones.length === 0) return subtotalBruto;
+
+    const porcentajeTotalDescuento = cupones.reduce(
+      (acc, c) => acc + Number(c.discount_percentage || 0),
+      0
+    );
+
+    const montoDescuento = (subtotalEntradas * porcentajeTotalDescuento) / 100;
+    return Math.max(0, subtotalBruto - montoDescuento);
   }
 
   get totalPuntos(): number {
-    return this.totalEntradasPuntos + this.totalCandyPuntos;
+    const subtotalEntradasPts = this.totalEntradasPuntos;
+    const subtotalCandyPts = this.totalCandyPuntos;
+    const subtotalBrutoPts = subtotalEntradasPts + subtotalCandyPts;
+
+    const cupones = this.cuponesAplicados();
+    if (cupones.length === 0) return subtotalBrutoPts;
+
+    const porcentajeTotalDescuento = cupones.reduce(
+      (acc, c) => acc + Number(c.discount_percentage || 0),
+      0
+    );
+
+    const descuentoPuntos = (subtotalEntradasPts * porcentajeTotalDescuento) / 100;
+    return Math.max(0, subtotalBrutoPts - descuentoPuntos);
   }
 
-  // Métodos trackBy para *ngFor
   trackByItemCandy(index: number, item: any): any {
     return item.id || item.producto_id || item.nombre;
   }
 
+  // 🌟 CONFIRMACIÓN DE PAGO CON VERIFICACIÓN DE SALDO EN CLIENTES
   async confirmarPagoFinal(): Promise<void> {
     try {
       if (this.misAsientos().length === 0 && this.itemsCandySeleccionados().length === 0) {
-        alert('Tu carrito está vacío.');
+        console.warn('Tu carrito está vacío.');
         return;
       }
 
-      const itemsConIdsFisicos = this.productosService.obtenerItemsSeleccionadosParaCheckout(this.itemsCandySeleccionados());
-      const itemsCandyParaJson = this.itemsCandySeleccionados().map(item => ({
-        id: item.id || item.producto_id,
-        nombre: item.nombre,
-        precio: Number(item.precio || item.precio_dinero || 0),
-        cantidad: Number(item.cantidad || item.cantidadDeseada || 0)
-      }));
-
       const totalGeneral = this.totalPagar;
+      const totalGeneralPuntos = this.totalPuntos;
       const uId = this.usuarioId();
+      const metodo = this.metodoPago(); // 'efectivo' (dinero) o 'puntos'
 
-      // --- FLUJO ANÓNIMO ---
+      // Si es anónimo, se mantiene el flujo de monto ingresado manual
       if (!uId) {
         const montoIngresado = Number(this.montoIngresadoAnonimo());
         if (montoIngresado !== Number(totalGeneral)) {
-          alert(`El monto ingresado ($${montoIngresado}) debe ser exacto al total a pagar ($${totalGeneral}).`);
+          console.warn(`El monto ingresado debe ser exacto ($${totalGeneral}).`);
           return;
         }
 
+        const itemsConIdsFisicos = this.productosService.obtenerItemsSeleccionadosParaCheckout(this.itemsCandySeleccionados());
+        const itemsCandyParaJson = this.itemsCandySeleccionados().map((item) => ({
+          id: item.id || item.producto_id,
+          nombre: item.nombre,
+          precio: Number(item.precio || item.precio_dinero || 0),
+          cantidad: Number(item.cantidad || item.cantidadDeseada || 0),
+        }));
+
         const codigoUnico = await this.entradasService.confirmarCompraConCandy(
-          null, 
-          this.misAsientos(), 
-          'efectivo',
-          itemsCandyParaJson,
-          itemsConIdsFisicos,
-          totalGeneral
+          null, this.misAsientos(), 'efectivo', itemsCandyParaJson, itemsConIdsFisicos, totalGeneral,
         );
 
         localStorage.removeItem('carritoCandyTemp');
         localStorage.removeItem('asientosSeleccionados');
-
-        alert(`¡Pago exitoso! Tu código de retiro único es: ${codigoUnico}`);
-        this.router.navigate(['/cartelera']);
+        this.codigoRetiroExitoso.set(codigoUnico);
+        this.mostrarModalExito.set(true);
         return;
       }
 
-      // --- FLUJO USUARIO REGISTRADO ---
+      // 1. Consultar saldo actual del cliente en Supabase
       const { data: clienteData, error: clienteError } = await supabase
         .from('clientes')
         .select('dinero, puntos, creditos')
@@ -268,52 +368,142 @@ export class CheckoutComponent implements OnInit {
         throw new Error('No se pudo verificar el saldo de tu cuenta.');
       }
 
-      const dineroActual = Number(clienteData.dinero || 0);
-      let dineroADescontar = 0;
-
-      const metodo = this.metodoPago();
+      // 2. Verificar si alcanza el saldo según el método de pago seleccionado
       if (metodo === 'efectivo') {
+        const dineroActual = Number(clienteData.dinero || 0);
         if (dineroActual < totalGeneral) {
-          alert(`Saldo insuficiente. Tienes $${dineroActual} y necesitas $${totalGeneral}.`);
+          // 🛑 Saldo insuficiente en dinero: Abrimos el modal
+          this.saldoActualCliente.set(dineroActual);
+          this.montoFaltante.set(Number((totalGeneral - dineroActual).toFixed(2)));
+          this.montoACargarInput.set(Number((totalGeneral - dineroActual).toFixed(2))); // Sugerencia inicial justa
+          this.mensajeErrorCarga.set('');
+          this.mostrarModalSaldoInsuficiente.set(true);
           return;
         }
-        dineroADescontar = totalGeneral;
-
-        const nuevoDinero = dineroActual - dineroADescontar;
-        const { error: updateError } = await supabase
-          .from('clientes')
-          .update({ dinero: nuevoDinero })
-          .eq('id', uId);
-
-        if (updateError) throw updateError;
+      } else if (metodo === 'puntos') {
+        const puntosActuales = Number(clienteData.puntos || 0);
+        if (puntosActuales < totalGeneralPuntos) {
+          console.warn('No tienes suficientes puntos para realizar esta compra.');
+          alert('No tienes suficientes puntos.');
+          return;
+        }
       }
 
-      const codigoUnico = await this.entradasService.confirmarCompraConCandy(
-        uId, 
-        this.misAsientos(), 
-        metodo,
-        itemsCandyParaJson,
-        itemsConIdsFisicos,
-        totalGeneral
-      );
-
-      localStorage.removeItem('carritoCandyTemp');
-      localStorage.removeItem('asientosSeleccionados');
-
-      alert(`¡Pago exitoso! Tu código de retiro único es: ${codigoUnico}`);
-      this.router.navigate(['/cartelera']);
+      // 3. Si tiene saldo suficiente, procesamos la compra directamente
+      await this.ejecutarTransaccionCompra(uId, totalGeneral, totalGeneralPuntos, metodo);
 
     } catch (error: any) {
-      alert(`Error al procesar el pago: ${error.message}`);
+      console.error(`Error al procesar el pago: ${error.message}`);
     }
+  }
+
+  // 🌟 Método auxiliar para ejecutar la transacción una vez verificado el saldo
+  private async ejecutarTransaccionCompra(uId: string, totalGeneral: number, totalGeneralPuntos: number, metodo: string): Promise<void> {
+    const itemsConIdsFisicos = this.productosService.obtenerItemsSeleccionadosParaCheckout(this.itemsCandySeleccionados());
+    const itemsCandyParaJson = this.itemsCandySeleccionados().map((item) => ({
+      id: item.id || item.producto_id,
+      nombre: item.nombre,
+      precio: Number(item.precio || item.precio_dinero || 0),
+      cantidad: Number(item.cantidad || item.cantidadDeseada || 0),
+    }));
+
+    if (metodo === 'efectivo') {
+      const { data: clienteData } = await supabase.from('clientes').select('dinero, puntos').eq('id', uId).single();
+      const dineroActual = Number(clienteData?.dinero || 0);
+      const nuevoDinero = Number((dineroActual - totalGeneral).toFixed(2));
+      const nuevosPuntos = Number(clienteData?.puntos || 0) + Math.floor(totalGeneral);
+
+      await supabase.from('clientes').update({ dinero: nuevoDinero, puntos: nuevosPuntos }).eq('id', uId);
+    } else if (metodo === 'puntos') {
+      const { data: clienteData } = await supabase.from('clientes').select('puntos').eq('id', uId).single();
+      const puntosActuales = Number(clienteData?.puntos || 0);
+      const nuevosPuntos = puntosActuales - totalGeneralPuntos;
+
+      await supabase.from('clientes').update({ puntos: nuevosPuntos }).eq('id', uId);
+    }
+
+    const codigoUnico = await this.entradasService.confirmarCompraConCandy(
+      uId, this.misAsientos(), metodo, itemsCandyParaJson, itemsConIdsFisicos, totalGeneral,
+    );
+
+    // Marcar cupones como usados
+    for (const cupon of this.cuponesAplicados()) {
+      if (cupon.userCouponId) {
+        await this.adminCuponesService.marcarCuponComoUsado(cupon.userCouponId);
+      }
+    }
+
+    localStorage.removeItem('carritoCandyTemp');
+    localStorage.removeItem('asientosSeleccionados');
+
+    await this.pdfService.generarComprobanteEntrada({
+      codigoUnico, asientos: this.misAsientos(), total: totalGeneral, metodoPago: metodo,
+    });
+
+    this.codigoRetiroExitoso.set(codigoUnico);
+    this.mostrarModalExito.set(true);
+  }
+
+  // 🌟 Cargar saldo desde el modal de saldo insuficiente
+  async cargarSaldoYContinuar(): Promise<void> {
+    const uId = this.usuarioId();
+    if (!uId) return;
+
+    const montoACargar = Number(this.montoACargarInput());
+    const totalGeneral = this.totalPagar;
+    const dineroActual = this.saldoActualCliente();
+    const faltanteMinimo = totalGeneral - dineroActual;
+
+    if (montoACargar < faltanteMinimo) {
+      this.mensajeErrorCarga.set(`El monto a cargar debe ser al menos de $${faltanteMinimo.toFixed(2)} para cubrir la compra.`);
+      return;
+    }
+
+    try {
+      this.mensajeErrorCarga.set('');
+      // Actualizamos sumando el saldo cargado en la tabla clientes
+      const nuevoDineroTotal = Number((dineroActual + montoACargar).toFixed(2));
+      
+      const { error } = await supabase
+        .from('clientes')
+        .update({ dinero: nuevoDineroTotal })
+        .eq('id', uId);
+
+      if (error) throw error;
+
+      // Cerramos el modal de saldo insuficiente
+      this.mostrarModalSaldoInsuficiente.set(false);
+
+      // Procedemos a ejecutar la compra exitosamente
+      await this.ejecutarTransaccionCompra(uId, totalGeneral, this.totalPuntos, this.metodoPago());
+
+    } catch (error: any) {
+      this.mensajeErrorCarga.set(`Error al cargar saldo: ${error.message}`);
+    }
+  }
+
+  cerrarModalSaldo(): void {
+    this.mostrarModalSaldoInsuficiente.set(false);
+  }
+
+  async aplicarCupon(): Promise<void> {
+    const codigo = this.codigoCuponInput();
+    if (codigo) {
+      await this.seleccionarCuponRapido(codigo);
+    }
+  }
+
+  finalizarYRedirigir(): void {
+    this.mostrarModalExito.set(false);
+    this.router.navigate(['/home']);
   }
 
   volverSeleccion(): void {
     const fId = this.funcionId();
     if (fId && fId !== 'solo-candy-placeholder-id') {
-      this.router.navigate(['/seleccionar-asientos', fId]); 
+      this.router.navigate(['/seleccionar-asientos', fId]);
     } else {
-      this.router.navigate(['/candybar']); 
+      this.router.navigate(['/candybar']);
     }
   }
 }

@@ -1,0 +1,95 @@
+<div class="card cupon-card mb-4">
+  <div class="cupon-header">
+    <h4 class="mb-0 fw-bold">Crear Nuevo Cupón</h4>
+  </div>
+
+  <div class="card-body p-4">
+    <!-- Alerta visual de feedback -->
+    <div *ngIf="mensajeFeedback() && !mostrarModalExito()" class="alert" [ngClass]="esError() ? 'alert-danger' : 'alert-success'" role="alert">
+      {{ mensajeFeedback() }}
+    </div>
+
+    <form [formGroup]="cuponForm" (ngSubmit)="crearCupon()">
+      <div class="row g-3">
+        
+        <!-- Código -->
+        <div class="col-md-4">
+          <label class="form-label">Código</label>
+          <input type="text" class="form-control" formControlName="code" placeholder="Ej: VERANO27">
+          <div *ngIf="cuponForm.get('code')?.invalid && cuponForm.get('code')?.touched" class="text-danger small mt-1">
+            El código es obligatorio (mínimo 3 caracteres).
+          </div>
+        </div>
+        
+        <!-- Descuento -->
+        <div class="col-md-4">
+          <label class="form-label">Descuento (%)</label>
+          <input type="number" class="form-control" formControlName="discount_percentage" min="1" max="100">
+        </div>
+
+        <!-- Tipo de Cupón -->
+        <div class="col-md-4">
+          <label class="form-label">Tipo de Cupón</label>
+          <select class="form-select" formControlName="tipo">
+            <option value="cumpleaños">Cumpleaños</option>
+            <option value="entre_fechas">Rango Entre Fechas</option>
+            <option value="fecha_especial">Fecha Especial</option>
+          </select>
+        </div>
+
+        <!-- Campos condicionales si el tipo es 'entre_fechas' -->
+        <ng-container *ngIf="tipoSeleccionado === 'entre_fechas'">
+          <div class="col-md-6">
+            <label class="form-label">Fecha de Inicio</label>
+            <!-- 🌟 Reemplazado por app-selector-fecha -->
+            <app-selector-fecha (fechaSeleccionada)="cuponForm.get('fecha_inicio')?.setValue($event)"></app-selector-fecha>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Fecha de Fin</label>
+            <!-- 🌟 Reemplazado por app-selector-fecha -->
+            <app-selector-fecha (fechaSeleccionada)="cuponForm.get('fecha_fin')?.setValue($event)"></app-selector-fecha>
+          </div>
+        </ng-container>
+
+        <!-- Campos condicionales si el tipo es 'fecha_especial' -->
+        <ng-container *ngIf="tipoSeleccionado === 'fecha_especial'">
+          <div class="col-md-12">
+            <label class="form-label">Fecha Específica</label>
+            <!-- 🌟 Reemplazado por app-selector-fecha -->
+            <app-selector-fecha (fechaSeleccionada)="cuponForm.get('fecha_especifica')?.setValue($event)"></app-selector-fecha>
+          </div>
+        </ng-container>
+        
+        <!-- Botón Guardar -->
+        <div class="col-12 mt-3 text-end">
+          <button type="submit" class="btn btn-primary btn-guardar">Guardar Cupón</button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL DE ÉXITO TIPO CARTEL MODERNO -->
+<div class="modal-backdrop-custom" *ngIf="mostrarModalExito()">
+  <div class="modal-content-custom">
+    
+    <!-- Cabecera limpia -->
+    <div class="modal-header-custom">
+      <h5 class="modal-title-custom">🎉 ¡Operación Exitosa!</h5>
+      <button type="button" class="btn-close-custom" (click)="cerrarModal()">×</button>
+    </div>
+
+    <!-- Cuerpo del mensaje -->
+    <div class="modal-body-custom">
+      <div class="modal-icon">✨</div>
+      <p class="modal-text">El cupón se ha creado correctamente</p>
+    </div>
+
+    <!-- Pie con el botón rojo -->
+    <div class="modal-footer-custom">
+      <button type="button" class="btn-rojo-accion" (click)="cerrarModal()">Aceptar</button>
+    </div>
+
+  </div>
+</div>

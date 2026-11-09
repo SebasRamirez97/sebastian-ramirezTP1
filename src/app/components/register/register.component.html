@@ -1,76 +1,90 @@
-<h2>Registro de Cliente</h2>
-<form [formGroup]="formCliente" (ngSubmit)="registrarCliente()">
-  <!-- Email -->
-  <div>
-    <input formControlName="email" placeholder="Email" type="email">
-    <div *ngIf="submitted() && formCliente.get('email')?.invalid" class="error">
-      Campo incompleto o email inválido
+<div class="register-container">
+  <h2>Registro de Cliente</h2>
+  
+  <form [formGroup]="formCliente" (ngSubmit)="registrarCliente()">
+    
+    <!-- Email -->
+    <div class="form-group">
+      <input formControlName="email" placeholder="Email" type="email">
+      <div *ngIf="submitted() && formCliente.get('email')?.invalid" class="error">
+        Campo incompleto o email inválido
+      </div>
     </div>
-  </div>
 
-  <!-- Password -->
-  <div>
-    <input formControlName="password" placeholder="Contraseña" type="password">
-    <div *ngIf="submitted() && formCliente.get('password')?.invalid" class="error">
-      Campo incompleto (mínimo 6 caracteres)
+    <!-- Password -->
+    <div class="form-group">
+      <input formControlName="password" placeholder="Contraseña" type="password">
+      <div *ngIf="submitted() && formCliente.get('password')?.invalid" class="error">
+        Campo incompleto (mínimo 6 caracteres)
+      </div>
     </div>
-  </div>
 
-  <!-- Nombre -->
-  <div>
-    <input formControlName="nombre" placeholder="Nombre">
-    <div *ngIf="submitted() && formCliente.get('nombre')?.invalid" class="error">
-      Campo incompleto (mínimo 3 letras)
+    <!-- 🌟 Confirmar Password -->
+    <div class="form-group">
+      <input formControlName="confirmPassword" placeholder="Confirmar Contraseña" type="password">
+      <div *ngIf="submitted() && formCliente.get('confirmPassword')?.invalid" class="error">
+        Campo incompleto
+      </div>
+      <!-- Alerta si las contraseñas no coinciden -->
+      <div *ngIf="submitted() && formCliente.hasError('noCoinciden') && !formCliente.get('confirmPassword')?.hasError('required')" class="error">
+        Las contraseñas no coinciden
+      </div>
     </div>
-  </div>
 
-  <!-- Apellido -->
-  <div>
-    <input formControlName="apellido" placeholder="Apellido">
-    <div *ngIf="submitted() && formCliente.get('apellido')?.invalid" class="error">
-      Campo incompleto
+    <!-- Nombre -->
+    <div class="form-group">
+      <input formControlName="nombre" placeholder="Nombre">
+      <div *ngIf="submitted() && formCliente.get('nombre')?.invalid" class="error">
+        Campo incompleto (mínimo 3 letras)
+      </div>
     </div>
-  </div>
 
-  <!-- Fecha de nacimiento -->
-  <div>
-    <input 
-      formControlName="fechaNacimiento" 
-      type="text" 
-      placeholder="Fecha de nacimiento" 
-      onfocus="(this.type='date')" 
-      onblur="(this.value ? this.type='date' : this.type='text')">
-      
-    <div *ngIf="submitted() && formCliente.get('fechaNacimiento')?.invalid" class="error">
-      <span *ngIf="formCliente.get('fechaNacimiento')?.hasError('required')">Campo incompleto</span>
-      <span *ngIf="formCliente.get('fechaNacimiento')?.hasError('menorDeEdad')">Debes tener al menos 13 años para registrarte</span>
+    <!-- Apellido -->
+    <div class="form-group">
+      <input formControlName="apellido" placeholder="Apellido">
+      <div *ngIf="submitted() && formCliente.get('apellido')?.invalid" class="error">
+        Campo incompleto
+      </div>
     </div>
-  </div>
 
-  <!-- Tipo de sangre -->
-  <div>
-    <input formControlName="tipoSangre" placeholder="Tipo de sangre">
-    <div *ngIf="submitted() && formCliente.get('tipoSangre')?.invalid" class="error">
-      Campo incompleto
+    <!-- Fecha de nacimiento -->
+    <div class="form-group">
+      <label class="form-label text-muted small fw-semibold">Fecha de Nacimiento</label>
+      <app-selector-fecha (fechaSeleccionada)="formCliente.get('fechaNacimiento')?.setValue($event)"></app-selector-fecha>
+
+      <div *ngIf="submitted() && formCliente.get('fechaNacimiento')?.invalid" class="error mt-1">
+        <span *ngIf="formCliente.get('fechaNacimiento')?.hasError('required')">Campo incompleto</span>
+        <span *ngIf="formCliente.get('fechaNacimiento')?.hasError('menorDeEdad')">Debes tener al menos 13 años para registrarte</span>
+      </div>
     </div>
-  </div>
 
-  <!-- Color de ojos -->
-  <div>
-    <input formControlName="colorOjos" placeholder="Color de ojos">
-    <div *ngIf="submitted() && formCliente.get('colorOjos')?.invalid" class="error">
-      Campo incompleto
+    <!-- Tipo de sangre -->
+    <div class="form-group">
+      <input formControlName="tipoSangre" placeholder="Tipo de sangre">
+      <div *ngIf="submitted() && formCliente.get('tipoSangre')?.invalid" class="error">
+        Campo incompleto
+      </div>
     </div>
-  </div>
 
-  <!-- Vacaciones -->
-  <div>
-    <input formControlName="vacaciones" type="number" placeholder="Días de vacaciones">
-    <div *ngIf="submitted() && formCliente.get('vacaciones')?.invalid" class="error">
-      Campo incompleto o número inválido
+    <!-- Color de ojos -->
+    <div class="form-group">
+      <input formControlName="colorOjos" placeholder="Color de ojos">
+      <div *ngIf="submitted() && formCliente.get('colorOjos')?.invalid" class="error">
+        Campo incompleto
+      </div>
     </div>
-  </div>
 
-  <button type="submit">Registrarse</button>
-  <button type="button" (click)="volverAlLogin()">Atrás</button>
-</form>
+    <!-- Vacaciones -->
+    <div class="form-group">
+      <input formControlName="vacaciones" type="number" placeholder="Días de vacaciones">
+      <div *ngIf="submitted() && formCliente.get('vacaciones')?.invalid" class="error">
+        Campo incompleto o número inválido
+      </div>
+    </div>
+
+    <!-- Botones -->
+    <button type="submit">Registrarse</button>
+    <button type="button" class="btn-atras" (click)="volverAlLogin()">Atrás</button>
+    
+  </form>
+</div>

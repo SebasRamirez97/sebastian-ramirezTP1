@@ -1,0 +1,24 @@
+<div class="container-fluid py-4 gestion-container">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="gestion-titulo-box">
+        <h2 class="fw-bold text-dark mb-1">🎫 Administración de Cupones y Promociones</h2>
+        <p class="text-muted mb-0">Crea nuevos cupones o gestiona los porcentajes, restricciones de edad y vigencias de los existentes.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Componente hijo 1: Formulario de creación -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <app-crear-cupon (couponCreated)="refrescarTabla()"></app-crear-cupon>
+    </div>
+  </div>
+
+  <!-- Componente hijo 2: Tabla de gestión y listado -->
+  <div class="row">
+    <div class="col-12">
+      <app-tabla-cupones #tablaCupones></app-tabla-cupones>
+    </div>
+  </div>
+</div>

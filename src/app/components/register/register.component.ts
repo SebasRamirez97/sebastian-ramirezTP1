@@ -3,17 +3,17 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { FormGroup, FormControl, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { SelectorFechaComponent } from '../selector-fecha/selector-fecha';
 
 export function mayorDeEdadValidator(edadMinima: number): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     if (!control.value) {
-      return null; // Si está vacío, de eso se encarga Validators.required
+      return null;
     }
 
     const fechaNacimiento = new Date(control.value);
     const hoy = new Date();
 
-    // Cálculo exacto de la edad
     let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
     const mes = hoy.getMonth() - fechaNacimiento.getMonth();
 
@@ -25,44 +25,55 @@ export function mayorDeEdadValidator(edadMinima: number): ValidatorFn {
   };
 }
 
+// 🌟 Validador personalizado para comprobar que las contraseñas coinciden
+export const passwordsCoincidenValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const password = control.get('password');
+  const confirmPassword = control.get('confirmPassword');
+
+  if (password && confirmPassword && password.value !== confirmPassword.value) {
+    return { noCoinciden: true };
+  }
+  return null;
+};
+
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [ReactiveFormsModule, CommonModule],
+  imports: [ReactiveFormsModule, CommonModule, SelectorFechaComponent],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.css']
 })
-export class RegisterComponent {
-  // 🔹 Inyección moderna con inject()
+export class RegisterComponent { 
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  // 🔹 Definición de estado con Signals
   submitted = signal<boolean>(false);
 
-  // 🔹 Definición del formulario reactivo
+  // 🌟 Agregamos confirmPassword al FormGroup y el validador a nivel de grupo
   formCliente = new FormGroup({
     email: new FormControl('', [Validators.required, Validators.email]),
     password: new FormControl('', [Validators.required, Validators.minLength(6)]),
+    confirmPassword: new FormControl('', [Validators.required]),
     nombre: new FormControl('', [Validators.required, Validators.minLength(3)]),
     apellido: new FormControl('', [Validators.required]),
     fechaNacimiento: new FormControl('', [Validators.required, mayorDeEdadValidator(13)]),
     tipoSangre: new FormControl('', [Validators.required]),
     colorOjos: new FormControl('', [Validators.required]),
     vacaciones: new FormControl('', [Validators.required, Validators.min(0)])
-  });
+  }, { validators: passwordsCoincidenValidator }); // 👈 Validación cruzada aplicada aquí
 
   async registrarCliente(): Promise<void> {
     this.submitted.set(true);
 
     if (this.formCliente.invalid) {
-      this.formCliente.markAllAsTouched(); // 👈 fuerza mostrar errores
-      return; // no envía nada
+      this.formCliente.markAllAsTouched();
+      return;
     }
 
     try {
-      const cliente = this.formCliente.value;
-      const res = await this.authService.signUpCliente(cliente as any);
+      // Extraemos confirmPassword para no enviarlo a la base de datos si no es necesario
+      const { confirmPassword, ...clienteData } = this.formCliente.value;
+      const res = await this.authService.signUpCliente(clienteData as any);
       console.log('Cliente registrado:', res);
       this.router.navigate(['/login']);
     } catch (err: any) {
@@ -72,7 +83,7 @@ export class RegisterComponent {
   }
 
   volverAlLogin(): void {
-    this.submitted.set(false); // 👈 Reinicia la bandera
+    this.submitted.set(false);
     this.formCliente.reset();
     this.router.navigate(['/login']);
   }

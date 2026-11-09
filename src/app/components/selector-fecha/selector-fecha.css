@@ -1,0 +1,40 @@
+/* Contenedor compacto en lugar de ocupar todo el ancho */
+.selector-fecha-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 8px; /* Espacio más sutil entre los selects */
+  width: 100%;
+  max-width: 420px; /* 🌟 Limitamos el ancho para que no se estire demasiado */
+  background-color: transparent; /* Quitamos el fondo pesado para que respire */
+  padding: 0;
+  border: none;
+  box-shadow: none;
+}
+
+/* Cada campo flex flexible pero controlado */
+.campo-fecha {
+  flex: 1;
+  min-width: 0;
+}
+
+.form-label-custom {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6c757d;
+  margin-bottom: 3px;
+  display: block;
+}
+
+.selector-fecha-wrapper .form-select {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #ced4da;
+  padding: 7px 10px;
+  font-size: 0.9rem;
+  background-color: #ffffff;
+}
+
+.selector-fecha-wrapper .form-select:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}

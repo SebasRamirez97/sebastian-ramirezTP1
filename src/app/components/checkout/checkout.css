@@ -1,0 +1,278 @@
+/* 🎬 Contenedor Principal del Checkout */
+.checkout-container {
+  max-width: 750px;
+  margin: 40px auto;
+  background: #ffffff;
+  padding: 35px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: #2c3e50;
+}
+
+.checkout-container h2 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1a252f;
+  margin-bottom: 25px;
+  border-bottom: 2px solid #ecf0f1;
+  padding-bottom: 12px;
+}
+
+/* 📋 Resumen de Información */
+.resumen-info {
+  background: #f8f9fa;
+  padding: 20px 25px;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+  margin-bottom: 25px;
+}
+
+.resumen-candy ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin-top: 8px;
+}
+
+.resumen-candy li {
+  padding: 4px 0;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.precio-total {
+  font-size: 1.3rem;
+  color: #2c3e50;
+  margin-top: 15px;
+  text-align: right;
+}
+
+/* 🎟️ Sección de Cupones */
+.seccion-cupon {
+  background: #fdfefe !important;
+  border: 1px dashed #cbd5e1 !important;
+  border-radius: 12px !important;
+}
+
+/* Botones de cupones disponibles */
+.seccion-cupon .btn-outline-secondary {
+  border-color: #94a3b8;
+  color: #475569;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.seccion-cupon .btn-outline-secondary:hover {
+  background-color: #e2e8f0;
+  border-color: #64748b;
+  color: #1e293b;
+}
+
+/* 💳 Métodos de Pago */
+.metodos-pago {
+  margin-top: 25px;
+  margin-bottom: 20px;
+}
+
+.metodos-pago > label {
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: block;
+  color: #334155;
+}
+
+.opcion-pago {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.opcion-pago:hover {
+  background: #f1f5f9;
+}
+
+.opcion-pago input[type="radio"] {
+  accent-color: #0d6efd;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.opcion-pago label {
+  cursor: pointer;
+  font-weight: 500;
+  color: #334155;
+  margin-bottom: 0;
+  width: 100%;
+}
+
+/* ⚙️ Sección Mixta e Inputs */
+.seccion-mixto,
+.simulacion-pago-anonimo {
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 25px;
+}
+
+.input-creditos,
+.input-monto {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 1rem;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-creditos:focus,
+.input-monto:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+
+.detalle-calculo,
+.help-text {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-top: 5px;
+}
+
+/* 🎬 Botones de Acción */
+.acciones {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 30px;
+  gap: 15px;
+}
+
+.btn-secundario {
+  background-color: #e2e8f0;
+  color: #475569;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secundario:hover {
+  background-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.btn-primary {
+  background-color: #0d6efd;
+  border: none;
+  padding: 10px 28px;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25);
+  transition: transform 0.1s, background 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: #0b5ed7;
+  transform: translateY(-1px);
+}
+
+/* =========================================
+   🎬 ESTILOS MODERNOS PARA EL MODAL
+   ========================================= */
+
+/* Fondo oscuro translúcido con efecto blur profesional */
+.modal-backdrop-custom {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(15, 23, 42, 0.75); /* Tono oscuro profundo y elegante */
+  backdrop-filter: blur(6px); /* Efecto desenfocado en el fondo */
+  z-index: 1050;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.25s ease-out;
+}
+
+/* Contenedor flotante centrado */
+.modal-dialog-centered-custom {
+  width: 100%;
+  max-width: 440px;
+  margin: 1.5rem;
+  z-index: 1055;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Tarjeta del modal con diseño limpio y moderno */
+.modal-content-custom {
+  background: #ffffff;
+  border-radius: 20px;
+  border: none;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+/* Cabecera con gradiente cálido/atractivo */
+.modal-header-custom {
+  background: linear-gradient(135deg, #f59e0b, #d97706); /* Tono ámbar/naranja elegante */
+  color: #ffffff;
+  padding: 22px 24px;
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-header-custom.success {
+  background: linear-gradient(135deg, #10b981, #059669); /* Esmeralda para éxito */
+}
+
+.modal-header-custom h5 {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+}
+
+/* Cuerpo del modal */
+.modal-body-custom {
+  padding: 28px 24px 20px 24px;
+  color: #334155;
+  text-align: center;
+}
+
+/* Footer del modal */
+.modal-footer-custom {
+  padding: 16px 24px 24px 24px;
+  background-color: #f8fafc;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Animaciones fluidas */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(25px) scale(0.96); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
