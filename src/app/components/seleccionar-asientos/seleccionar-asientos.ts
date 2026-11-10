@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, inject,HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EntradasService } from '../../services/entradas.services';
 import { FuncionesService } from '../../services/funciones';
 import { supabase } from '../../services/supabaseClient';
+import { ComponenteConAsientosPendientes } from '../../guards/liberar-asientos.guard';
 
 @Component({
   selector: 'app-seleccionar-asientos',
@@ -12,14 +13,14 @@ import { supabase } from '../../services/supabaseClient';
   templateUrl: './seleccionar-asientos.html',
   styleUrls: ['./seleccionar-asientos.css'],
 })
-export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
+export class SeleccionarAsientosComponent implements OnInit, OnDestroy, ComponenteConAsientosPendientes {
   // 🔹 Inyección moderna con inject()
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private entradasService = inject(EntradasService);
   private funcionesService = inject(FuncionesService);
 
-  // 🔹 Definición de estados con Signals (adiós a ChangeDetectorRef)
+  // 🔹 Definición de estados con Signals
   funcionId = signal<string>('');
   funcion = signal<any>(null);
 
@@ -28,7 +29,8 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
     'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
   ]);
 
-  asientosOcupados = signal<Map<string, any>>(new Map());
+  // 🔹 Definición correcta tipando el Map
+  asientosOcupados = signal(new Map<string, any>());
   misAsientosSeleccionados = signal<any[]>([]);
 
   // IDs de asientos guardados localmente si es anónimo
@@ -43,6 +45,32 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
   cantidadPermitida = signal<number>(1);
 
   private realtimeChannel: any;
+  
+  @HostListener('window:beforeunload', ['$event'])
+  unloadNotification($event: any): void {
+    if (this.misAsientosSeleccionados().length > 0) {
+      $event.returnValue = 'Perderás los asientos seleccionados si sales.';
+    }
+  }
+
+  // 🛡️ Métodos requeridos por el CanDeactivate Guard
+  puedeSalir(): boolean {
+    // Si tiene asientos seleccionados y no ha ido a pagar/candybar, avisa
+    return this.misAsientosSeleccionados().length === 0;
+  }
+
+  async liberarAsientosTemporales(): Promise<void> {
+    try {
+      // Liberamos cada asiento que el usuario tenía en estado 'seleccionado'
+      const asientos = this.misAsientosSeleccionados();
+      for (const asiento of asientos) {
+        await this.entradasService.liberarAsiento(asiento.id);
+      }
+      this.misAsientosSeleccionados.set([]);
+    } catch (err) {
+      console.error('Error al liberar asientos al salir:', err);
+    }
+  }
 
   async ngOnInit(): Promise<void> {
     const fId = this.route.snapshot.paramMap.get('funcionId') || '';
@@ -71,6 +99,8 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
       this.suscripcionRealtime();
     }
   }
+
+
 
   ngOnDestroy(): void {
     if (this.realtimeChannel) {
@@ -120,10 +150,8 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
           ? (e.usuario_id === uId)
           : (this.idsAsientosAnonimo.includes(e.id));
 
-        if (esMio && (e.estado === 'seleccionado' || e.estado === 'comprado' || e.estado === 'ocupado' || e.estado === 'retirado')) {
-          if (e.estado === 'seleccionado') {
-            misSeleccionadosTemp.push(e);
-          }
+        if (esMio && e.estado === 'seleccionado') {
+          misSeleccionadosTemp.push(e);
         }
       });
 
@@ -209,6 +237,11 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
           const filtrados = misSelActual.filter((a) => a.id !== asientoExistente.id);
           this.misAsientosSeleccionados.set(filtrados);
 
+          // 🌟 Si ya no quedan asientos seleccionados localmente, limpiamos el localStorage del Candy Bar
+          if (filtrados.length === 0) {
+            localStorage.removeItem('asientosSeleccionados');
+          }
+
           if (!uId) {
             this.idsAsientosAnonimo = this.idsAsientosAnonimo.filter(id => id !== asientoExistente.id);
             this.actualizarLocalStorageAnonimo();
@@ -279,16 +312,25 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
       : (this.idsAsientosAnonimo.includes(asiento.id));
 
     const esMioSeleccionado = esMio && asiento.estado === 'seleccionado';
-    const esMioComprado = esMio && (asiento.estado === 'comprado' || asiento.estado === 'ocupado' || asiento.estado === 'retirado');
-    const ocupadoPorOtro = !esMio && (asiento.estado === 'comprado' || asiento.estado === 'seleccionado' || asiento.estado === 'ocupado' || asiento.estado === 'retirado');
-    const esLibre = !esMioSeleccionado && !esMioComprado && !ocupadoPorOtro;
+    const esCompradoGeneral = this.esCompradoORetirado(asiento);
+    
+    // Si es tuyo y ya fue comprado/retirado -> Azul
+    const esMioComprado = esMio && esCompradoGeneral;
+    
+    // Si fue comprado/retirado por otro, o seleccionado por otro -> Gris
+    const ocupadoPorOtro = !esMio && (asiento.estado === 'seleccionado' || esCompradoGeneral);
 
     return {
-      'asiento-libre': esLibre,
+      'asiento-libre': false,
       'asiento-mio': esMioSeleccionado,
       'asiento-mio-comprado': esMioComprado,
       'asiento-ocupado': ocupadoPorOtro,
     };
+  }
+
+  // 🌟 Valida si el asiento ya se encuentra comprado o retirado
+  private esCompradoORetirado(asiento: any): boolean {
+    return asiento && (asiento.estado === 'comprado' || asiento.estado === 'retirado');
   }
 
   isAsientoDeshabilitado(fila: string, numero: number): boolean {
@@ -301,10 +343,8 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy {
       ? (asiento.usuario_id === uId)
       : (this.idsAsientosAnonimo.includes(asiento.id));
 
-    return asiento.estado === 'comprado' || 
-           asiento.estado === 'ocupado' || 
-           asiento.estado === 'retirado' || 
-           (!esMio && asiento.estado === 'seleccionado');
+    // Se deshabilita si ya fue comprado/retirado por cualquiera, o si está seleccionado por otra persona
+    return this.esCompradoORetirado(asiento) || (!esMio && asiento.estado === 'seleccionado');
   }
 
   // 🔹 Funciones trackBy para los bucles *ngFor

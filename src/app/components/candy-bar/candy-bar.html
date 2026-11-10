@@ -1,10 +1,16 @@
 <div class="cartelera-container">
   <div class="header-section">
-    <h2>🍬 Candy Bar - Catálogo</h2>
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <!-- 🌟 Botón condicional si el usuario viene de seleccionar asientos -->
+      <button *ngIf="tieneAsientosPendientes()" class="btn btn-secundario" (click)="volverASeleccionAsientos()">
+        ⬅ Volver a Asientos
+      </button>
+      <h2>🍬 Candy Bar - Catálogo</h2>
+    </div>
     
     <div class="acciones-header">
       <!-- Botón exclusivo de Admin usando *ngIf tradicional -->
-      <button *ngIf="rol() === 'admin'" class="btn-crear" routerLink="/admin/productos/crear">
+      <button *ngIf="rol() === 'admin'" class="btn-crear" routerLink="/crear-producto">
         ➕ Nuevo Producto
       </button>
     </div>

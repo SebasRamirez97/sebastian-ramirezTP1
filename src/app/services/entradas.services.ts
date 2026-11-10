@@ -167,13 +167,13 @@ export class EntradasService {
       .single();
 
     if (errorOrden) throw errorOrden;
-
-    // 2. 🎟️ Actualizamos entradas de cine
+    
+    // 2. 🎟️ Actualizamos entradas de cine a 'comprado' para que reflejen el color correcto
     if (asientos && asientos.length > 0) {
       const idsAsientos = asientos.map(a => a.id);
       const { error: errorAsientos } = await supabase
         .from('entradas')
-        .update({ estado: 'ocupado', orden_id: ordenCreada.id })
+        .update({ estado: 'comprado', orden_id: ordenCreada.id })
         .in('id', idsAsientos);
 
       if (errorAsientos) throw errorAsientos;

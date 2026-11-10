@@ -6,6 +6,7 @@ import { adminGuard } from './guards/admin.guard';
 import { empleadoGuard } from './guards/empleado.guard';
 import { clienteGuard } from './guards/cliente.guard';
 import { loginGuard } from './guards/login.guard';
+import { liberarAsientosGuard } from './guards/liberar-asientos.guard';
 
 export const routes: Routes = [
   { 
@@ -46,7 +47,8 @@ export const routes: Routes = [
   { 
     path: 'candybar', 
     loadComponent: () => import('./components/candy-bar/candy-bar').then(m => m.CandyBarComponent), 
-    canActivate: [authGuard] 
+    canActivate: [authGuard],
+    canDeactivate: [liberarAsientosGuard]
   },
   { 
     path: 'crear-producto', 
@@ -82,17 +84,20 @@ export const routes: Routes = [
   { 
     path: 'seleccionar-asientos/:funcionId', 
     loadComponent: () => import('./components/seleccionar-asientos/seleccionar-asientos').then(m => m.SeleccionarAsientosComponent), 
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    canDeactivate: [liberarAsientosGuard]
   },
   { 
     path: 'checkout/:funcionId', 
     loadComponent: () => import('./components/checkout/checkout').then(m => m.CheckoutComponent), 
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    canDeactivate: [liberarAsientosGuard]
   },
   { 
     path: 'checkout',  
     loadComponent: () => import('./components/checkout/checkout').then(m => m.CheckoutComponent), 
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    canDeactivate: [liberarAsientosGuard]
   },
 
   // 🍿 Funciones de Cine (Admin)

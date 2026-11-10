@@ -1,5 +1,5 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, signal, inject, HostListener } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EntradasService } from '../../services/entradas.services';
@@ -7,6 +7,7 @@ import { ProductosService } from '../../services/productos.service';
 import { supabase } from '../../services/supabaseClient';
 import { PdfService } from '../../services/pdf.service';
 import { AdminCuponesService } from '../../services/admin-cupones.service';
+import { ComponenteConAsientosPendientes } from '../../guards/liberar-asientos.guard';
 
 @Component({
   selector: 'app-checkout',
@@ -15,9 +16,10 @@ import { AdminCuponesService } from '../../services/admin-cupones.service';
   templateUrl: './checkout.html',
   styleUrls: ['./checkout.css'],
 })
-export class CheckoutComponent implements OnInit {
+export class CheckoutComponent implements OnInit, ComponenteConAsientosPendientes {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private location = inject(Location);
   private entradasService = inject(EntradasService);
   private productosService = inject(ProductosService);
   private pdfService = inject(PdfService);
@@ -57,6 +59,36 @@ export class CheckoutComponent implements OnInit {
   cuponesDisponiblesCliente = signal<any[]>([]);
 
   private idsAsientosAnonimo: string[] = [];
+
+  @HostListener('window:beforeunload', ['$event'])
+  unloadNotification($event: any): void {
+    if (this.misAsientos().length > 0 && !this.mostrarModalExito()) {
+      $event.returnValue = 'Si sales ahora, tu proceso de compra se cancelará y perderás tus asientos.';
+    }
+  }
+
+  // 🛡️ Métodos requeridos por el CanDeactivate Guard
+  puedeSalir(): boolean {
+    // 🌟 Permitimos salir libremente si el modal de éxito ya se mostró o si ya no hay asientos pendientes
+    return this.mostrarModalExito() || this.misAsientos().length === 0;
+  }
+
+  async liberarAsientosTemporales(): Promise<void> {
+    try {
+      // Si la compra ya fue exitosa, no liberamos nada
+      if (this.mostrarModalExito()) return;
+
+      const asientos = this.misAsientos();
+      for (const asiento of asientos) {
+        await this.entradasService.liberarAsiento(asiento.id);
+      }
+      this.misAsientos.set([]);
+      localStorage.removeItem('asientosSeleccionados');
+      localStorage.removeItem('carritoCandyTemp');
+    } catch (err) {
+      console.error('Error al liberar asientos desde el checkout:', err);
+    }
+  }
 
   async ngOnInit(): Promise<void> {
     const idParam = this.route.snapshot.paramMap.get('funcionId') || '';
@@ -236,14 +268,14 @@ export class CheckoutComponent implements OnInit {
     const uId = this.usuarioId();
     if (uId) {
       const filtrados = todasLasEntradas.filter(
-        (e) => e.usuario_id === uId && (e.estado === 'seleccionado' || e.estado === 'ocupado'),
+        (e) => e.usuario_id === uId && e.estado === 'seleccionado',
       );
       this.misAsientos.set(filtrados);
     } else {
       const filtrados = todasLasEntradas.filter(
         (e) =>
           this.idsAsientosAnonimo.includes(e.id) &&
-          (e.estado === 'seleccionado' || e.estado === 'ocupado'),
+          e.estado === 'seleccionado',
       );
       this.misAsientos.set(filtrados);
     }
@@ -352,8 +384,11 @@ export class CheckoutComponent implements OnInit {
 
         localStorage.removeItem('carritoCandyTemp');
         localStorage.removeItem('asientosSeleccionados');
+        
+        // 🌟 Marcamos el éxito y vaciamos los asientos locales para permitir la salida
         this.codigoRetiroExitoso.set(codigoUnico);
         this.mostrarModalExito.set(true);
+        this.misAsientos.set([]); 
         return;
       }
 
@@ -442,6 +477,9 @@ export class CheckoutComponent implements OnInit {
 
     this.codigoRetiroExitoso.set(codigoUnico);
     this.mostrarModalExito.set(true);
+    
+    // 🌟 Vaciamos los asientos locales para permitir la salida inmediata del guard
+    this.misAsientos.set([]);
   }
 
   // 🌟 Cargar saldo desde el modal de saldo insuficiente
@@ -499,11 +537,6 @@ export class CheckoutComponent implements OnInit {
   }
 
   volverSeleccion(): void {
-    const fId = this.funcionId();
-    if (fId && fId !== 'solo-candy-placeholder-id') {
-      this.router.navigate(['/seleccionar-asientos', fId]);
-    } else {
-      this.router.navigate(['/candybar']);
-    }
+    this.location.back();
   }
 }
