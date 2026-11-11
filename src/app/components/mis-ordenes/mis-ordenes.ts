@@ -42,6 +42,7 @@ export class MisOrdenesComponent implements OnInit {
           metodo_pago,
           total,
           created_at,
+          items_candy,
           entradas (
             id,
             fila,

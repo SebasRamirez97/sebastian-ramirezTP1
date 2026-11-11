@@ -5,7 +5,6 @@
 
 <ng-template #contenidoDetalle>
   <div *ngIf="pelicula() as p" class="container-detalle">
-    
     <!-- ⬅️ Botón para volver al listado -->
     <div class="seccion-volver">
       <button (click)="volver()" class="btn-volver">⬅️ Volver a cartelera</button>
@@ -19,7 +18,6 @@
 
     <!-- 1. PARTE SUPERIOR: Imagen y Detalles -->
     <div class="seccion-superior">
-      
       <!-- Izquierda: Imagen -->
       <div class="columna-izquierda">
         <img
@@ -30,52 +28,110 @@
 
         <div *ngIf="modoEdicion()" class="campo-edicion">
           <label>URL de la imagen:</label>
-          <input 
-            [value]="peliculaEditada().imagen || ''" 
-            (input)="actualizarCampo('imagen', $event)" 
-            type="text" 
-            placeholder="https://..." 
+          <input
+            [value]="peliculaEditada().imagen || ''"
+            (input)="actualizarCampo('imagen', $event)"
+            type="text"
+            placeholder="https://..."
           />
         </div>
       </div>
 
       <!-- Derecha: Detalles -->
       <div class="columna-derecha">
-        
         <div *ngIf="!modoEdicion(); else formEdicionDetalles">
           <h1 class="titulo-pelicula">{{ p.nombre }}</h1>
+          <p class="dato">
+            <strong>🎭 Género(s):</strong>
+            {{
+              p.genero && typeof p.genero === 'object'
+                ? p.genero.join(', ')
+                : p.genero || 'No especificado'
+            }}
+          </p>
+          <p class="dato"><strong>🔞 Límite de edad:</strong> {{ p.limite_edad || 'ATP' }}</p>
           <p class="dato"><strong>⏱️ Duración:</strong> {{ p.duracion }} minutos</p>
           <p class="dato">
-            <strong>📅 Fecha de estreno:</strong> {{ p.fecha_estreno | date: 'dd/MM/yyyy' }}
+            <strong>📅 Fecha de estreno:</strong> {{ p.fecha_estreno | dateFormat }}
           </p>
         </div>
 
         <ng-template #formEdicionDetalles>
           <div class="campo-edicion">
             <label>Título:</label>
-            <input 
-              [value]="peliculaEditada().nombre || ''" 
-              (input)="actualizarCampo('nombre', $event)" 
-              type="text" 
+            <input
+              [value]="peliculaEditada().nombre || ''"
+              (input)="actualizarCampo('nombre', $event)"
+              type="text"
             />
+          </div>
+
+          <!-- Género Editable -->
+          <div class="campo-edicion">
+            <label>Géneros:</label>
+            <div class="contenedor-generos-edicion">
+              
+              <!-- Usamos trackBy: trackByIndex para fijar el DOM de cada input -->
+              <div
+                *ngFor="let gen of generosEditables(); let i = index; trackBy: trackByIndex"
+                class="chip-genero-edicion"
+              >
+                <input
+                  type="text"
+                  [value]="gen"
+                  (input)="actualizarNombreGeneroDirecto(i, $event)"
+                  class="input-chip-genero"
+                  placeholder="Género..."
+                />
+                <button
+                  type="button"
+                  class="btn-eliminar-chip"
+                  (click)="eliminarGenero(i)"
+                  title="Eliminar género"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <!-- Botón para agregar un nuevo género -->
+              <button type="button" class="btn-agregar-genero" (click)="agregarGenero()">
+                + Agregar Género
+              </button>
+            </div>
+          </div>
+
+          <!-- Límite de Edad Editable -->
+          <div class="campo-edicion">
+            <label>Límite de edad:</label>
+            <select
+              [value]="peliculaEditada().limite_edad || 'ATP'"
+              (change)="actualizarCampo('limite_edad', $event)"
+            >
+              <option value="ATP">ATP (Apta para todo público)</option>
+              <option value="+13">Mayores de 13 años (+13)</option>
+              <option value="+16">Mayores de 16 años (+16)</option>
+              <option value="+18">Mayores de 18 años (+18)</option>
+            </select>
           </div>
 
           <div class="campo-edicion">
             <label>Duración (minutos):</label>
-            <input 
-              [value]="peliculaEditada().duracion || 0" 
-              (input)="actualizarCampo('duracion', $event)" 
-              type="number" 
+            <input
+              [value]="peliculaEditada().duracion || 0"
+              (input)="actualizarCampo('duracion', $event)"
+              type="number"
             />
           </div>
 
+          <!-- 🌟 Selector de Fecha Moderno para la Edición -->
           <div class="campo-edicion">
             <label>Fecha de estreno:</label>
-            <input 
-              [value]="peliculaEditada().fecha_estreno || ''" 
-              (input)="actualizarCampo('fecha_estreno', $event)" 
-              type="date" 
-            />
+            <app-selector-fecha (fechaSeleccionada)="onFechaEstrenoSeleccionada($event)">
+            </app-selector-fecha>
+            <small style="color: #666; margin-top: 2px">
+              Fecha actual configurada:
+              {{ (peliculaEditada().fecha_estreno | dateFormat) || 'No definida' }}
+            </small>
           </div>
         </ng-template>
 
@@ -95,7 +151,6 @@
           <button (click)="guardarCambios()" class="btn-guardar">💾 Guardar Cambios</button>
           <button (click)="cancelarEdicion()" class="btn-cancelar">❌ Cancelar</button>
         </div>
-
       </div>
     </div>
 
@@ -103,13 +158,14 @@
     <div class="seccion-sinopsis">
       <h3>Sinopsis</h3>
       <p *ngIf="!modoEdicion(); else edicionSinopsis" class="texto-sinopsis">{{ p.sinopsis }}</p>
-      
+
       <ng-template #edicionSinopsis>
         <div class="campo-edicion">
-          <textarea 
-            [value]="peliculaEditada().sinopsis || ''" 
-            (input)="actualizarCampo('sinopsis', $event)" 
-            rows="4">
+          <textarea
+            [value]="peliculaEditada().sinopsis || ''"
+            (input)="actualizarCampo('sinopsis', $event)"
+            rows="4"
+          >
           </textarea>
         </div>
       </ng-template>
@@ -124,15 +180,90 @@
 
     <!-- 4. RESEÑAS -->
     <div class="seccion-resenas">
-      <h3>Reseñas y Opiniones</h3>
+      <div class="header-resenas-row">
+        <h3>Reseñas y Opiniones</h3>
+        <!-- Botón para dejar o editar reseña (Solo si está logueado como cliente) -->
+        <button
+          *ngIf="usuarioLogueadoId() && !modoEdicion()"
+          (click)="mostrarFormResena.set(!mostrarFormResena())"
+          class="btn-dejar-resena"
+        >
+          💬 {{ resenaExistenteId() ? 'Editar mi Reseña' : 'Dejar una Reseña' }}
+        </button>
+      </div>
+
       <small *ngIf="modoEdicion()" class="nota-no-editable">
         (Las reseñas son creadas por los clientes y no se pueden editar aquí)
       </small>
 
-      <div class="lista-resenas">
-        <p class="sin-resenas">Aún no hay reseñas registradas para esta película.</p>
-      </div>
-    </div>
+      <!-- 🌟 Cuadro desplegable para escribir/editar reseña (Estilo Red Social Moderna) -->
+      <div *ngIf="mostrarFormResena()" class="form-resena-card">
+        <p class="form-resena-titulo">Califica esta película:</p>
 
+        <!-- Selector de Estrellas Interactivo -->
+        <div class="estrellas-selector">
+          <span
+            *ngFor="let s of [1, 2, 3, 4, 5]"
+            (click)="seleccionarPuntaje(s)"
+            [class.activa]="s <= puntajeSeleccionado()"
+            class="estrella-opcion"
+            title="{{ s }} estrellas"
+          >
+            ★
+          </span>
+          <span class="puntaje-texto-label"
+            ><strong>{{ puntajeSeleccionado() }}</strong> de 5 estrellas</span
+          >
+        </div>
+
+        <!-- Fila de Textarea y Botón Publicar al costado -->
+        <div class="form-resena-body-row">
+          <textarea
+            [ngModel]="comentarioInput()"
+            (ngModelChange)="comentarioInput.set($event)"
+            placeholder="Escribe un comentario corto sobre la película..."
+            rows="3"
+            class="textarea-comentario"
+          >
+          </textarea>
+          <button (click)="publicarResena()" class="btn-publicar-resena">🚀 Publicar</button>
+        </div>
+      </div>
+
+      <!-- Listado de Reseñas -->
+      <div class="lista-resenas" *ngIf="resenas().length > 0; else sinResenasTemplate">
+        <div *ngFor="let r of resenas()" class="resena-item">
+          <div class="resena-header-info">
+            <span class="resena-autor">
+              <span class="avatar-inicial">{{
+                (r.clientes?.nombre || 'U').charAt(0).toUpperCase()
+              }}</span>
+              {{ r.clientes?.nombre || 'Usuario' }} {{ r.clientes?.apellido || '' }}
+            </span>
+            <span class="resena-fecha">📅 {{ r.created_at | date: 'dd/MM/yyyy - HH:mm' }} hs</span>
+          </div>
+
+          <!-- Estrellas pintadas -->
+          <div class="resena-estrellas">
+            <span
+              *ngFor="let s of [1, 2, 3, 4, 5]"
+              [class.pintada]="s <= r.puntaje"
+              class="estrella-vista"
+              >★</span
+            >
+          </div>
+
+          <p class="resena-comentario">{{ r.comentario }}</p>
+        </div>
+      </div>
+
+      <ng-template #sinResenasTemplate>
+        <div class="sin-resenas-box">
+          <p class="sin-resenas">
+            🍿 Aún no hay reseñas registradas para esta película. ¡Sé el primero en opinar!
+          </p>
+        </div>
+      </ng-template>
+    </div>
   </div>
 </ng-template>

@@ -9,9 +9,9 @@ export interface Producto {
   precio_puntos: number;
   imagen?: string;
   estado?: 'disponible' | 'reservado' | 'vendido'; // 👈 Nuevo campo de la BD
-  orden_id?: string | null;                       // 👈 Nuevo campo para la vinculación
-  stock?: number;                                 // 👈 Calculado dinámicamente al agrupar
-  cantidadDeseada?: number;                       // 👈 Para el carrito local del usuario
+  orden_id?: string | null; // 👈 Nuevo campo para la vinculación
+  stock?: number; // 👈 Calculado dinámicamente al agrupar
+  cantidadDeseada?: number; // 👈 Para el carrito local del usuario
 }
 
 @Injectable({
@@ -124,10 +124,14 @@ export class ProductosService {
     // Al crear un producto individual nuevo, aseguramos que nazca con estado 'disponible'
     const productoConEstado = {
       ...producto,
-      estado: 'disponible'
+      estado: 'disponible',
     };
 
-    const { data, error } = await supabase.from('productos').insert([productoConEstado]).select().single();
+    const { data, error } = await supabase
+      .from('productos')
+      .insert([productoConEstado])
+      .select()
+      .single();
 
     if (error) {
       console.error('Error al insertar producto:', error);
@@ -153,10 +157,13 @@ export class ProductosService {
   }
 
   guardarCarritoTemp(items: any[]) {
-  this.itemsCarritoTemporal = items;
-}
+    this.itemsCarritoTemporal = items;
+  }
 
-obtenerCarritoTemp(): any[] {
-  return this.itemsCarritoTemporal;
-}
+  obtenerCarritoTemp(): any[] {
+    return this.itemsCarritoTemporal;
+  }
+  limpiarCarritoTemp() {
+    this.itemsCarritoTemporal = [];
+  }
 }

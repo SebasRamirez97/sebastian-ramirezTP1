@@ -9,13 +9,15 @@ export interface Resena {
 }
 
 export interface Pelicula {
-  id?: string;
+  id: string;
   nombre: string;
   fecha_estreno: string;
-  imagen: string; // URL de la imagen
-  duracion: number; // En minutos
+  imagen: string;
+  duracion: number;
   sinopsis: string;
+  genero: string[] | string;        // 👈 Nueva
+  limite_edad: string;    // 👈 Nueva
   puntaje?: number;
+  created_at?: string;
   cantidad_veces_vendida?: number;
-  resenas?: Resena[];
 }

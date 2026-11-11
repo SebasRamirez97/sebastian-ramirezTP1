@@ -68,13 +68,14 @@
   color: #555;
 }
 
-.campo-edicion input, .campo-edicion textarea {
+.campo-edicion input, .campo-edicion select, .campo-edicion textarea {
   padding: 8px 10px;
   border: 1px solid #ccc;
   border-radius: 6px;
   font-size: 0.95rem;
   width: 100%;
   box-sizing: border-box;
+  background-color: #fff;
 }
 
 .nota-no-editable {
@@ -160,4 +161,312 @@
 
 .btn-volver:hover {
   background-color: #e0e0e0;
+}
+
+/* ==========================================
+   🌟 SECCIÓN DE RESEÑAS Y OPINIONES (PRO)
+   ========================================== */
+.seccion-resenas {
+  border-top: 2px solid #f1f5f9;
+  padding-top: 25px;
+  margin-top: 30px;
+}
+
+.header-resenas-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.header-resenas-row h3 {
+  font-size: 1.4rem;
+  color: #1e293b;
+  margin: 0;
+  font-weight: 700;
+}
+
+.btn-dejar-resena {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-dejar-resena:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 15px rgba(16, 185, 129, 0.35);
+}
+
+/* Tarjeta desplegable para escribir reseña */
+.form-resena-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.form-resena-titulo {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #334155;
+  margin-bottom: 10px;
+}
+
+/* Selector de estrellas interactivo */
+.estrellas-selector {
+  font-size: 2rem;
+  color: #cbd5e1;
+  cursor: pointer;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.estrella-opcion {
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.estrella-opcion:hover {
+  transform: scale(1.2);
+}
+
+.estrella-opcion.activa {
+  color: #fbbf24; /* Dorado brillante */
+  text-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);
+}
+
+.puntaje-texto-label {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-left: 10px;
+  font-weight: 500;
+}
+
+/* Fila del formulario (Textarea + Botón) */
+.form-resena-body-row {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+.textarea-comentario {
+  flex: 1;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: #ffffff;
+  color: #1e293b;
+  resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.textarea-comentario:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.btn-publicar-resena {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  height: fit-content;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-publicar-resena:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 15px rgba(59, 130, 246, 0.35);
+}
+
+/* Listado de Tarjetas de Reseñas */
+.lista-resenas {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.resena-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 5px solid #3b82f6;
+  padding: 16px 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.resena-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.resena-header-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.resena-autor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Avatar de inicial decorativo para el autor */
+.avatar-inicial {
+  width: 28px;
+  height: 28px;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  font-weight: bold;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+}
+
+.resena-fecha {
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.resena-estrellas {
+  font-size: 1.15rem;
+  color: #cbd5e1;
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+}
+
+.estrella-vista.pintada {
+  color: #fbbf24;
+}
+
+.resena-comentario {
+  color: #475569;
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+/* Caja para cuando no hay reseñas */
+.sin-resenas-box {
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 25px;
+  text-align: center;
+}
+
+.sin-resenas {
+  color: #64748b;
+  font-style: normal;
+  font-weight: 500;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* ==========================================
+   🌟 ESTILOS PARA EDICIÓN DINÁMICA DE GÉNEROS
+   ========================================== */
+.contenedor-generos-edicion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.chip-genero-edicion {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #94a3b8;
+  border-radius: 20px;
+  padding: 4px 8px 4px 12px;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.input-chip-genero {
+  border: none !important;
+  background: transparent !important;
+  padding: 2px 0 !important;
+  font-size: 0.9rem !important;
+  font-weight: 600;
+  color: #1e293b;
+  width: 110px;
+  outline: none;
+}
+
+.btn-eliminar-chip {
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-eliminar-chip:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.btn-agregar-genero {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px dashed #38bdf8;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-agregar-genero:hover {
+  background: #bae6fd;
+  color: #03588c;
 }

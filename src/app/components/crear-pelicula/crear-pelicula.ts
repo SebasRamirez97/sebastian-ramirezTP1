@@ -12,23 +12,22 @@ import { PeliculasService } from '../../services/peliculas';
   styleUrls: ['./crear-pelicula.css']
 })
 export class CrearPeliculaComponent {
-  // 🔹 Inyección moderna con inject()
   private peliculasService = inject(PeliculasService);
   private router = inject(Router);
 
-  // 🔹 Definición de estados con Signals
   submitted = signal<boolean>(false);
   subiendoImagen = signal<boolean>(false);
   selectedFile = signal<File | null>(null);
 
   formPelicula = new FormGroup({
     nombre: new FormControl('', [Validators.required, Validators.minLength(2)]),
+    genero: new FormControl('', [Validators.required]),
+    limite_edad: new FormControl('ATP', [Validators.required]), // 👈 Por defecto 'ATP'
     fecha_estreno: new FormControl('', [Validators.required]),
     duracion: new FormControl<number | null>(null, [Validators.required, Validators.min(1)]),
     sinopsis: new FormControl('', [Validators.required, Validators.minLength(10)])
   });
 
-  // 🔹 Captura el archivo seleccionado desde el input HTML
   onFileSelected(event: any) {
     const file: File = event.target.files[0];
     if (file) {
@@ -39,7 +38,6 @@ export class CrearPeliculaComponent {
   async guardarPelicula(): Promise<void> {
     this.submitted.set(true);
 
-    // Valida formulario e imagen
     if (this.formPelicula.invalid || !this.selectedFile()) {
       this.formPelicula.markAllAsTouched();
       return;
@@ -54,11 +52,13 @@ export class CrearPeliculaComponent {
       // 1. Subir imagen a Supabase Storage
       const urlImagen = await this.peliculasService.subirImagen(file);
 
-      // 2. Guardar película con la URL obtenida
+      // 2. Guardar película incluyendo los nuevos campos
       const datos = this.formPelicula.value;
       await this.peliculasService.agregarPelicula({
         nombre: datos.nombre!,
         fecha_estreno: datos.fecha_estreno!,
+        genero: datos.genero!,                  // 👈 Nuevo
+        limite_edad:(datos.limite_edad!), // 👈 Nuevo
         imagen: urlImagen,
         duracion: datos.duracion!,
         sinopsis: datos.sinopsis!

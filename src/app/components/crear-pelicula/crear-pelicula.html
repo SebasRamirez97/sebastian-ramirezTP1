@@ -14,6 +14,29 @@
     </div>
   </div>
 
+  <!-- Género -->
+  <div>
+    <input formControlName="genero" placeholder="Género (ej: Acción, Drama, Comedia)">
+    <div *ngIf="submitted() && formPelicula.get('genero')?.invalid" class="error">
+      <div *ngIf="formPelicula.get('genero')?.hasError('required')">
+        Campo obligatorio incompleto
+      </div>
+      <div *ngIf="formPelicula.get('genero')?.hasError('minlength')">
+        Debe tener al menos 2 caracteres
+      </div>
+    </div>
+  </div>
+
+  <!-- Límite de Edad -->
+  <div>
+    <select formControlName="limite_edad">
+      <option value="ATP">ATP (Apta para todo público)</option>
+      <option value="+13">Mayores de 13 años (+13)</option>
+      <option value="+16">Mayores de 16 años (+16)</option>
+      <option value="+18">Mayores de 18 años (+18)</option>
+    </select>
+  </div>
+
   <!-- Fecha de estreno -->
   <div>
     <input 
@@ -28,7 +51,7 @@
     </div>
   </div>
 
-  <!-- Selección de Imagen (.jpg) -->
+  <!-- Selección de Imagen (.jpg / .png) -->
   <div>
     <label style="display: block; margin-bottom: 5px; font-weight: bold;">Póster de la película (.jpg / .png):</label>
     <input type="file" accept="image/jpeg, image/jpg, image/png" (change)="onFileSelected($event)">

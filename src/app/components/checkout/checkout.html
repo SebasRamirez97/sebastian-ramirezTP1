@@ -39,8 +39,6 @@
 
     <!-- 🎟️ Input para ingresar y aplicar nuevos cupones -->
     <div class="seccion-cupon card p-3 mb-4 shadow-sm bg-light">
-      
-
       <!-- 🌟 SECCIÓN DE CUPONES DISPONIBLES EN LA CUENTA DEL CLIENTE -->
       <div *ngIf="usuarioId() !== null && cuponesDisponiblesCliente().length > 0" class="mt-3">
         <small class="text-muted d-block mb-2">🎁 Cupones disponibles en tu cuenta (haz clic para aplicar):</small>
@@ -119,22 +117,37 @@
   </ng-template>
 </div>
 
-<!-- 🛑 MODAL DE ÉXITO DE PAGO -->
-<div class="modal fade" [ngClass]="{'show d-block': mostrarModalExito()}" tabindex="-1" role="dialog" style="background: rgba(0,0,0,0.5);" *ngIf="mostrarModalExito()">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content shadow-lg">
-      <div class="modal-header bg-success text-white">
-        <h5 class="modal-title">¡Pago Exitoso! 🎉</h5>
+<!-- 🛑 MODAL DE EDAD INSUFICIENTE -->
+<div class="modal-backdrop-custom" *ngIf="mostrarModalEdadInsuficiente()">
+  <div class="modal-dialog-centered-custom">
+    <div class="modal-content-custom">
+      
+      <!-- Cabecera con tono de advertencia/error -->
+      <div class="modal-header-custom bg-danger text-white">
+        <h5 class="m-0">Acceso Denegado 🚫</h5>
       </div>
-      <div class="modal-body text-center py-4">
-        <div class="fs-1 mb-2">🎟️</div>
-        <p class="fs-5 mb-2">Tu entrada y comprobante en PDF se han descargado correctamente.</p>
-        <p class="text-muted small">Tu código de retiro único es:</p>
-        <h3 class="text-primary fw-bold">{{ codigoRetiroExitoso() }}</h3>
+
+      <!-- Cuerpo del modal -->
+      <div class="modal-body-custom text-center">
+        <div style="font-size: 3.5rem;" class="mb-2">⚠️</div>
+        <p class="mb-3 text-secondary" style="font-size: 1.1rem; font-weight: 500;">
+          {{ mensajeEdadInsuficiente() }}
+        </p>
+        <p class="text-muted small mb-0">
+          Tus asientos seleccionados y productos del Candy Bar han sido liberados.
+        </p>
       </div>
-      <div class="modal-footer justify-content-center">
-        <button type="button" class="btn btn-success px-5" (click)="finalizarYRedirigir()">Ir al Inicio</button>
+
+      <!-- Pie del modal con botón de acción -->
+      <div class="modal-footer-custom justify-content-center">
+        <button 
+          type="button" 
+          class="btn btn-danger px-5 rounded-pill fw-bold shadow-sm" 
+          (click)="cerrarModalEdadYRedirigir()">
+          Volver al Inicio
+        </button>
       </div>
+
     </div>
   </div>
 </div>
@@ -177,7 +190,7 @@
   </div>
 </div>
 
-<!-- 🎉 MODAL DE ÉXITO DE PAGO -->
+<!-- 🎉 MODAL DE ÉXITO DE PAGO (Único y con diseño unificado) -->
 <div class="modal-backdrop-custom" *ngIf="mostrarModalExito()">
   <div class="modal-dialog-centered-custom">
     <div class="modal-content-custom">
@@ -198,3 +211,4 @@
     </div>
   </div>
 </div>
+

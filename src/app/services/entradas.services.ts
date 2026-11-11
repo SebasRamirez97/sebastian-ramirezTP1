@@ -5,7 +5,7 @@ import { supabase } from './supabaseClient'; // Ajusta la ruta a tu cliente de S
   providedIn: 'root',
 })
 export class EntradasService {
-  constructor() { }
+  constructor() {}
 
   /**
    * Genera un código aleatorio limpio de 7 letras mayúsculas
@@ -51,7 +51,7 @@ export class EntradasService {
           numero_asiento: numeroAsiento,
           estado: 'seleccionado',
           aprobada: false,
-        }
+        },
       ])
       .select(); // Devolvemos el array insertado sin forzar .single()
 
@@ -80,7 +80,11 @@ export class EntradasService {
   /**
    * Confirma la compra: Calcula el total y genera la orden unificada.
    */
-  async confirmarCompra(usuarioId: string | null, asientosSeleccionados: any[], metodoPago: string = 'efectivo'): Promise<string> {
+  async confirmarCompra(
+    usuarioId: string | null,
+    asientosSeleccionados: any[],
+    metodoPago: string = 'efectivo',
+  ): Promise<string> {
     if (asientosSeleccionados.length === 0) {
       throw new Error('No hay asientos seleccionados para comprar.');
     }
@@ -119,7 +123,7 @@ export class EntradasService {
           codigo_retiro: codigoUnico,
           estado: 'pagado',
           total: totalCalculado,
-          metodo_pago: metodoPago
+          metodo_pago: metodoPago,
         },
       ])
       .select()
@@ -142,11 +146,11 @@ export class EntradasService {
 
   async confirmarCompraConCandy(
     usuarioId: string | null,
-    asientos: any[] = [], 
+    asientos: any[] = [],
     metodoPago: string,
     itemsCandyJson: any[] = [],
     itemsConIdsFisicos: any[] = [],
-    totalGeneral: number = 0 // 👈 Recibimos el total sumado de entradas + candy
+    totalGeneral: number = 0, // 👈 Recibimos el total sumado de entradas + candy
   ): Promise<string> {
     const codigoRetiro = Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -160,17 +164,17 @@ export class EntradasService {
           metodo_pago: metodoPago,
           estado: 'pagado',
           total: totalGeneral, // 👈 Aquí se guarda la suma total de dinero
-          items_candy: itemsCandyJson.length > 0 ? itemsCandyJson : null
-        }
+          items_candy: itemsCandyJson.length > 0 ? itemsCandyJson : null,
+        },
       ])
       .select()
       .single();
 
     if (errorOrden) throw errorOrden;
-    
+
     // 2. 🎟️ Actualizamos entradas de cine a 'comprado' para que reflejen el color correcto
     if (asientos && asientos.length > 0) {
-      const idsAsientos = asientos.map(a => a.id);
+      const idsAsientos = asientos.map((a) => a.id);
       const { error: errorAsientos } = await supabase
         .from('entradas')
         .update({ estado: 'comprado', orden_id: ordenCreada.id })
@@ -181,7 +185,7 @@ export class EntradasService {
 
     // 3. 🍿 Reservamos productos del Candy Bar físicos
     const idsFisicosAreservar: string[] = [];
-    itemsConIdsFisicos.forEach(item => {
+    itemsConIdsFisicos.forEach((item) => {
       if (item.idsFisicos) {
         idsFisicosAreservar.push(...item.idsFisicos);
       }
@@ -192,7 +196,7 @@ export class EntradasService {
         .from('productos')
         .update({
           estado: 'reservado',
-          orden_id: ordenCreada.id
+          orden_id: ordenCreada.id,
         })
         .in('id', idsFisicosAreservar);
 
@@ -201,7 +205,8 @@ export class EntradasService {
 
     return codigoRetiro;
   }
-async verificarYAprobarOrden(codigoRetiro: string): Promise<any> {
+
+  async verificarYAprobarOrden(codigoRetiro: string): Promise<any> {
     // 1. Buscar la orden por su código de retiro
     const { data: orden, error: errorBusqueda } = await supabase
       .from('ordenes')
@@ -267,5 +272,46 @@ async verificarYAprobarOrden(codigoRetiro: string): Promise<any> {
     }
 
     return ordenActualizada;
+  }
+
+  // 1. Función para extraer la edad mínima numérica del texto del límite
+  async obtenerEdadMinima(limiteTexto: string): Promise<number> {
+    if (!limiteTexto || limiteTexto.toUpperCase() === 'ATP') {
+      return 0; // ATP es apto para cualquier edad
+    }
+    const matches = limiteTexto.match(/\d+/);
+    return matches ? parseInt(matches[0], 10) : 0;
+  }
+
+  // 2. Función para calcular la edad del usuario según su fecha de nacimiento
+  async calcularEdadUsuario(fechaNacimiento: string): Promise<number> {
+    if (!fechaNacimiento) return 0;
+
+    // Desglosamos la fecha YYYY-MM-DD de forma segura evitando problemas de zona horaria UTC
+    const partes = fechaNacimiento.split('T')[0].split('-');
+    if (partes.length === 3) {
+      const anioNac = parseInt(partes[0], 10);
+      const mesNac = parseInt(partes[1], 10) - 1; // Los meses en JS van de 0 a 11
+      const diaNac = parseInt(partes[2], 10);
+
+      const hoy = new Date();
+      let edad = hoy.getFullYear() - anioNac;
+      const m = hoy.getMonth() - mesNac;
+
+      if (m < 0 || (m === 0 && hoy.getDate() < diaNac)) {
+        edad--;
+      }
+      return edad;
+    }
+
+    // Fallback por seguridad
+    const hoy = new Date();
+    const nacimiento = new Date(fechaNacimiento);
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const m = hoy.getMonth() - nacimiento.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) {
+      edad--;
+    }
+    return edad;
   }
 }

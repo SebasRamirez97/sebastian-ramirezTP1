@@ -17,8 +17,6 @@
       <label for="pelicula_id">Película:</label>
       <select id="pelicula_id" formControlName="pelicula_id" class="form-control">
         <option value="" disabled>Seleccione una película...</option>
-        
-        <!-- Bucle clásico *ngFor con la señal peliculas() y trackBy -->
         <option *ngFor="let pelicula of peliculas(); trackBy: trackByPelicula" [value]="pelicula.id">
           {{ pelicula.nombre }} ({{ pelicula.duracion }} min)
         </option>
@@ -37,18 +35,31 @@
       </select>
     </div>
 
-    <!-- Fecha y Hora de Inicio -->
+    <!-- 🌟 Selección de Idioma (Castellano / Subtitulada) -->
     <div class="form-group">
-      <label for="fecha_inicio">Fecha y Hora de Inicio:</label>
+      <label for="idioma">Idioma / Versión:</label>
+      <select id="idioma" formControlName="idioma" class="form-control">
+        <option *ngFor="let lang of idiomas(); trackBy: trackByIdioma" [value]="lang">{{ lang }}</option>
+      </select>
+    </div>
+
+    <!-- 🌟 Componente Selector de Fecha Personalizado -->
+    <div class="form-group">
+      <label>Fecha de la Función:</label>
+      <app-selector-fecha (fechaSeleccionada)="onFechaCambiada($event)"></app-selector-fecha>
+    </div>
+
+    <!-- Hora de Inicio -->
+    <div class="form-group">
+      <label for="hora_inicio">Hora de Inicio:</label>
       <input 
-        type="datetime-local" 
-        id="fecha_inicio" 
-        formControlName="fecha_inicio" 
+        type="time" 
+        id="hora_inicio" 
+        formControlName="hora_inicio" 
         class="form-control"
       />
-      
-      <span *ngIf="funcionForm.get('fecha_inicio')?.touched && funcionForm.get('fecha_inicio')?.invalid" class="error-text">
-        La fecha y hora de inicio son requeridas.
+      <span *ngIf="funcionForm.get('hora_inicio')?.touched && funcionForm.get('hora_inicio')?.invalid" class="error-text">
+        La hora de inicio es requerida.
       </span>
     </div>
 
