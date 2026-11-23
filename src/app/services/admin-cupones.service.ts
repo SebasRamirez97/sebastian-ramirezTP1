@@ -133,12 +133,13 @@ export class AdminCuponesService {
   }
 
   // Obtener los cupones disponibles y no usados del cliente (filtrando bienvenida y edad mínima)
+  // Obtener los cupones disponibles y no usados del cliente
   async obtenerCuponesDelCliente(userId: string) {
     await this.verificarYAsignarCuponCumpleanos(userId);
 
     const { fechaStr: hoyArg } = this.obtenerFechaArgentina();
+    const esCumpleHoy = await this.verificarEsCumpleanos(userId);
 
-    // 1. Verificar si el cliente ya hizo su primera compra (tiene órdenes)
     const { count: totalOrdenes } = await supabase
       .from('ordenes')
       .select('*', { count: 'exact', head: true })
@@ -146,7 +147,6 @@ export class AdminCuponesService {
 
     const yaCompro = (totalOrdenes || 0) > 0;
 
-    // 2. Traer los cupones asignados y no usados del usuario
     const { data: userCouponsData, error } = await supabase
       .from('user_coupons')
       .select(`
@@ -174,22 +174,20 @@ export class AdminCuponesService {
       return { data: [], error };
     }
 
-    // 3. Filtrar cupones asignados (bienvenida si ya compró, y validación estricta de edad mínima)
-    // 3. Filtrar cupones asignados (bienvenida si ya compró, y validación estricta de edad mínima)
     const cuponesAsignados: any[] = [];
-    for (const item of userCouponsData) {
-      // 🌟 Hacemos un casting explícito a any para evitar que TypeScript reclame por las propiedades
+    for (const item of userCouponsData || []) {
       const cupon = item.coupons as any;
-
       if (!cupon || cupon.active === false) continue;
 
       const esBienvenida = cupon.is_welcome || cupon.tipo === 'bienvenida';
-      if (yaCompro && esBienvenida) continue; // Ocultar bienvenida si ya compró
+      if (yaCompro && esBienvenida) continue;
 
-      // 🌟 Validar edad mínima si el cupón la requiere
+      const esCumple = cupon.tipo === 'cumpleanos' || cupon.tipo === 'cumpleaños';
+      if (esCumple && !esCumpleHoy) continue;
+
       if (cupon.min_age && cupon.min_age > 0) {
         const cumpleEdad = await this.verificarEdadCliente(userId, cupon.min_age);
-        if (!cumpleEdad) continue; // Ocultar si el cliente es menor a la edad mínima
+        if (!cumpleEdad) continue;
       }
 
       cuponesAsignados.push({
@@ -197,7 +195,7 @@ export class AdminCuponesService {
         ...cupon
       });
     }
-    // 4. Traer cupones generales vigentes (rango de fechas o fecha específica)
+
     const { data: cuponesGenerales } = await supabase
       .from('coupons')
       .select('*')
@@ -208,7 +206,9 @@ export class AdminCuponesService {
       const esBienvenida = c.is_welcome || c.tipo === 'bienvenida';
       if (yaCompro && esBienvenida) continue;
 
-      // 🌟 Validar edad mínima para cupones generales
+      const esCumple = c.tipo === 'cumpleanos' || c.tipo === 'cumpleaños';
+      if (esCumple && !esCumpleHoy) continue;
+
       if (c.min_age && c.min_age > 0) {
         const cumpleEdad = await this.verificarEdadCliente(userId, c.min_age);
         if (!cumpleEdad) continue;
@@ -233,7 +233,6 @@ export class AdminCuponesService {
       }
     }
 
-    // 5. Unir ambos sin duplicar
     const todosDisponibles = [...cuponesAsignados];
     for (const gen of cuponesGeneralesVigentes) {
       if (!todosDisponibles.some(existing => existing.id === gen.id)) {

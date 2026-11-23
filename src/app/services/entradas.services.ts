@@ -23,7 +23,11 @@ export class EntradasService {
    * Obtiene todas las entradas existentes para una función específica
    */
   async getEntradasPorFuncion(funcionId: string): Promise<any[]> {
-    const { data, error } = await supabase.from('entradas').select('*').eq('funcion_id', funcionId);
+    const { data, error } = await supabase
+      .from('entradas')
+      .select('*')
+      .eq('funcion_id', funcionId)
+      .neq('estado', 'disponible');
 
     if (error) {
       throw new Error(`Error al cargar los asientos: ${error.message}`);
@@ -40,7 +44,42 @@ export class EntradasService {
     fila: string,
     numeroAsiento: number,
   ): Promise<any> {
-    // Quitamos .single() y .select() complejos que causan el conflicto 400
+    const { data: existente, error: errorConsulta } = await supabase
+      .from('entradas')
+      .select('*')
+      .eq('funcion_id', funcionId)
+      .eq('fila', fila)
+      .eq('numero_asiento', numeroAsiento)
+      .maybeSingle();
+
+    if (errorConsulta) {
+      throw new Error(`Error al verificar el asiento: ${errorConsulta.message}`);
+    }
+
+    if (existente) {
+      if (existente.estado !== 'disponible') {
+        throw new Error('Este asiento acaba de ser seleccionado o comprado por otro usuario.');
+      }
+
+      const { data: actualizada, error: errorUpdate } = await supabase
+        .from('entradas')
+        .update({
+          usuario_id: usuarioId,
+          estado: 'seleccionado',
+          aprobada: false,
+          orden_id: null,
+        })
+        .eq('id', existente.id)
+        .eq('estado', 'disponible')
+        .select();
+
+      if (errorUpdate) {
+        throw new Error(`No se pudo seleccionar el asiento: ${errorUpdate.message}`);
+      }
+
+      return actualizada && actualizada.length > 0 ? actualizada[0] : null;
+    }
+
     const { data, error } = await supabase
       .from('entradas')
       .insert([
@@ -53,7 +92,7 @@ export class EntradasService {
           aprobada: false,
         },
       ])
-      .select(); // Devolvemos el array insertado sin forzar .single()
+      .select();
 
     if (error) {
       if (error.code === '23505') {
@@ -62,7 +101,6 @@ export class EntradasService {
       throw new Error(`No se pudo seleccionar el asiento: ${error.message}`);
     }
 
-    // Retornamos el primer elemento insertado con éxito
     return data && data.length > 0 ? data[0] : null;
   }
 
@@ -96,7 +134,7 @@ export class EntradasService {
       .select('precio_pesos, precio_puntos')
       .eq('id', funcionId)
       .single();
-
+    
     if (errorFuncion || !funcionData) {
       throw new Error('No se pudo obtener la información de precios de la función.');
     }

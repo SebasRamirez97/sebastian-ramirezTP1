@@ -5,35 +5,37 @@
     <p>Presenta el código QR o el código de retiro en la entrada del cine o del Candy Bar.</p>
   </div>
 
+  <!-- Mensaje de resultado -->
+  <div *ngIf="mensajeEstado() as msg" class="alerta" [class.alerta-exito]="msg.tipo === 'exito'" [class.alerta-error]="msg.tipo === 'error'">
+    {{ msg.texto }}
+  </div>
+
   <!-- Estado de carga con *ngIf / *ngElse -->
   <div *ngIf="cargando(); else contenidoOrdenes" class="loading-container">
     <p class="loading">Cargando tus órdenes...</p>
   </div>
 
   <ng-template #contenidoOrdenes>
-    <!-- Si no hay órdenes -->
     <div *ngIf="misOrdenes().length === 0; else listaOrdenes">
       <div class="alert-info">
         <p>🎬 No tienes compras registradas todavía. ¡Explora la cartelera y reserva tu lugar!</p>
       </div>
     </div>
 
-    <!-- Si hay órdenes, listamos con *ngFor clásico y trackBy -->
     <ng-template #listaOrdenes>
       <div class="grid-ordenes">
         <div *ngFor="let orden of misOrdenes(); trackBy: trackByOrden" class="ticket-card">
-          <!-- Sección Superior del Ticket -->
           <div class="ticket-header">
             <span class="badge-cine">
-              {{ orden.entradas && orden.entradas.length > 0 ? 'Cine + Candy' : 'Candy Bar' }}
+              {{ obtenerAsientosOrden(orden).length > 0 ? 'Cine + Candy' : 'Candy Bar' }}
             </span>
+            <span *ngIf="estaCancelada(orden)" class="badge-cancelada">Cancelada</span>
           </div>
 
           <div class="ticket-body">
-            <!-- Tomamos la peli de la primera entrada asociada o indicamos compra de Candy -->
-            <div *ngIf="orden.entradas && orden.entradas.length > 0; else soloCandy">
+            <div *ngIf="obtenerAsientosOrden(orden).length > 0; else soloCandy">
               <h3 class="pelicula-titulo">
-                {{ orden.entradas?.[0]?.funciones?.peliculas?.nombre || 'Película' }}
+                {{ obtenerAsientosOrden(orden)[0]?.funciones?.peliculas?.nombre || obtenerAsientosOrden(orden)[0]?.pelicula || 'Película' }}
               </h3>
             </div>
             <ng-template #soloCandy>
@@ -41,40 +43,44 @@
             </ng-template>
 
             <div class="ticket-detalles">
-              <div *ngIf="orden.entradas && orden.entradas.length > 0">
-                <div class="detalle-item">
+              <div *ngIf="obtenerAsientosOrden(orden).length > 0">
+                <div class="detalle-item" *ngIf="obtenerAsientosOrden(orden)[0]?.funciones?.fecha_inicio || obtenerAsientosOrden(orden)[0]?.fecha_inicio">
                   <span class="label">📅 Fecha</span>
-                  <span class="valor">{{ orden.entradas?.[0]?.funciones?.fecha_inicio | date: 'dd/MM/yyyy' }}</span>
+                  <span class="valor">
+                    {{ (obtenerAsientosOrden(orden)[0]?.funciones?.fecha_inicio || obtenerAsientosOrden(orden)[0]?.fecha_inicio) | date: 'dd/MM/yyyy' }}
+                  </span>
                 </div>
-                <div class="detalle-item">
+                <div class="detalle-item" *ngIf="obtenerAsientosOrden(orden)[0]?.funciones?.fecha_inicio || obtenerAsientosOrden(orden)[0]?.fecha_inicio">
                   <span class="label">🕒 Hora</span>
-                  <span class="valor">{{ orden.entradas?.[0]?.funciones?.fecha_inicio | date: 'HH:mm' }} hs</span>
+                  <span class="valor">
+                    {{ (obtenerAsientosOrden(orden)[0]?.funciones?.fecha_inicio || obtenerAsientosOrden(orden)[0]?.fecha_inicio) | date: 'HH:mm' }} hs
+                  </span>
                 </div>
                 <div class="detalle-item full-width">
                   <span class="label">🏢 Sala / Formato</span>
                   <span class="valor">
-                    {{ orden.entradas?.[0]?.funciones?.salas?.nombre || 'Sala' }} 
-                    ({{ orden.entradas?.[0]?.funciones?.formato || 'Standard' }})
+                    {{ obtenerSalaOrden(orden) }}
+                    <ng-container *ngIf="obtenerAsientosOrden(orden)[0]?.funciones?.formato || obtenerAsientosOrden(orden)[0]?.formato">
+                      ({{ obtenerAsientosOrden(orden)[0]?.funciones?.formato || obtenerAsientosOrden(orden)[0]?.formato }})
+                    </ng-container>
                   </span>
                 </div>
-                
-                <!-- Asientos comprados con *ngFor clásico (Corregido a let isLast = last) -->
+
                 <div class="detalle-item full-width">
                   <span class="label">💺 Asientos</span>
                   <span class="valor">
-                    <span *ngFor="let entrada of orden.entradas; trackBy: trackByEntrada; let isLast = last">
+                    <span *ngFor="let entrada of obtenerAsientosOrden(orden); trackBy: trackByEntrada; let isLast = last">
                       F: {{ entrada.fila }} - A: {{ entrada.numero_asiento }}{{ !isLast ? ', ' : '' }}
                     </span>
                   </span>
                 </div>
               </div>
 
-              <!-- 🍿 Mostrar los nombres y detalles de los productos de Candy Bar -->
               <div *ngIf="orden.items_candy && orden.items_candy.length > 0" class="detalle-item full-width candy-resumen-tarjeta">
                 <span class="label">🍿 Productos Candy</span>
                 <ul class="lista-candy-mini">
                   <li *ngFor="let candy of orden.items_candy; trackBy: trackByCandy">
-                    {{ candy.cantidad }}x {{ candy.nombre }} (${{ (candy.precio_dinero || 0) * (candy.cantidad || 1) }})
+                    {{ candy.cantidad }}x {{ candy.nombre }} (${{ (candy.precio_dinero || candy.precio || 0) * (candy.cantidad || 1) }})
                   </li>
                 </ul>
               </div>
@@ -86,16 +92,47 @@
             </div>
           </div>
 
-          <!-- Sección Inferior / Acción -->
           <div class="ticket-footer">
             <button (click)="verDetallesOrden(orden)" class="btn-qr-ticket">
               🔍 Ver QR y Detalles
+            </button>
+
+            <button
+              *ngIf="!estaCancelada(orden)"
+              type="button"
+              class="btn-cancelar-orden"
+              [disabled]="!puedeCancelarOrden(orden)"
+              [title]="puedeCancelarOrden(orden) ? 'Cancelar orden y recibir 50% en crédito' : 'Disponible hasta 2 horas antes de la función'"
+              (click)="solicitarCancelacion(orden)"
+            >
+              Cancelar compra
             </button>
           </div>
         </div>
       </div>
     </ng-template>
   </ng-template>
+
+  <!-- Modal de confirmación para cancelar orden -->
+  <div *ngIf="ordenACancelar() as orden" class="modal-backdrop" (click)="cerrarModalCancelacion()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <h3>¿Cancelar esta compra?</h3>
+      <p>
+        Se acreditarán <strong>${{ calcularCreditoReembolso(orden) | number:'1.2-2' }}</strong> en créditos
+        (50% del total de ${{ orden.total | number:'1.2-2' }}) en tu cuenta. No se reintegra dinero en efectivo.
+      </p>
+      <p>Las butacas y productos de esta orden volverán a estar disponibles.</p>
+
+      <div class="modal-actions">
+        <button type="button" [disabled]="cancelandoOrden()" (click)="confirmarCancelacionOrden()">
+          {{ cancelandoOrden() ? 'Cancelando...' : 'Confirmar cancelación' }}
+        </button>
+        <button type="button" [disabled]="cancelandoOrden()" (click)="cerrarModalCancelacion()">
+          Volver
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal / Pantalla flotante con el QR -->
   <div *ngIf="ordenSeleccionada() as os" class="modal-overlay" (click)="cerrarDetalles()">
@@ -106,15 +143,14 @@
       </div>
 
       <div class="modal-body">
-        <div *ngIf="os.entradas && os.entradas.length > 0; else modalSoloCandy">
-          <h4>{{ os.entradas?.[0]?.funciones?.peliculas?.nombre }}</h4>
-          <p class="modal-sub">
-            {{ os.entradas?.[0]?.funciones?.fecha_inicio | date: 'EEEE dd/MM/yyyy - HH:mm' }} hs
+        <div *ngIf="obtenerAsientosOrden(os).length > 0; else modalSoloCandy">
+          <h4>{{ obtenerAsientosOrden(os)[0]?.funciones?.peliculas?.nombre || obtenerAsientosOrden(os)[0]?.pelicula || 'Película' }}</h4>
+          <p class="modal-sub" *ngIf="obtenerAsientosOrden(os)[0]?.funciones?.fecha_inicio || obtenerAsientosOrden(os)[0]?.fecha_inicio">
+            {{ (obtenerAsientosOrden(os)[0]?.funciones?.fecha_inicio || obtenerAsientosOrden(os)[0]?.fecha_inicio) | date: 'EEEE dd/MM/yyyy - HH:mm' }} hs
           </p>
           <p class="modal-asientos-resumen">
-            <strong>Asientos:</strong> 
-            <!-- Corregido a let isLast = last -->
-            <span *ngFor="let ent of os.entradas; trackBy: trackByEntrada; let isLast = last">
+            <strong>Asientos:</strong>
+            <span *ngFor="let ent of obtenerAsientosOrden(os); trackBy: trackByEntrada; let isLast = last">
               Fila {{ ent.fila }} Asiento {{ ent.numero_asiento }}{{ !isLast ? ', ' : '' }}
             </span>
           </p>
@@ -124,7 +160,6 @@
           <p class="modal-sub">Compra exclusiva de productos</p>
         </ng-template>
 
-        <!-- 🍿 Mostrar el nombre del producto detallado en el Modal -->
         <div *ngIf="os.items_candy && os.items_candy.length > 0" class="modal-candy-detalle">
           <strong>Snacks incluidos:</strong>
           <ul>
@@ -136,9 +171,7 @@
 
         <div class="qr-box">
           <img [src]="'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + os.codigo_retiro" alt="QR de Orden">
-          
           <p class="qr-instruccion">Presenta este código en la confitería o boletería</p>
-          
           <div class="codigo-respaldo-box">
             <span class="label-respaldo">Código de respaldo:</span>
             <span class="texto-respaldo">{{ os.codigo_retiro }}</span>

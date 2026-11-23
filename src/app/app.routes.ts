@@ -56,6 +56,12 @@ export const routes: Routes = [
     canActivate: [adminGuard] 
   },
 
+  { 
+    path: 'crear-combo', 
+    loadComponent: () => import('./components/crear-combo/crear-combo').then(m => m.CrearComboComponent), 
+    canActivate: [adminGuard] 
+  },
+
   // 🎟️ Gestión de Cupones (Admin) 👈 NUEVA RUTA
   { 
     path: 'gestionar-cupones', 

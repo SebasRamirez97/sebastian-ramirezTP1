@@ -38,6 +38,12 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
 
   metodoPago = signal<string>('efectivo');
   creditosAUsar = signal<number>(0);
+  dineroAUsar = signal<number>(0);
+
+  dineroDisponibleCliente = signal<number>(0);
+  puntosDisponiblesCliente = signal<number>(0);
+  creditosDisponiblesCliente = signal<number>(0);
+  usarCreditos = signal<boolean>(true);
 
   itemsCandySeleccionados = signal<any[]>([]);
 
@@ -74,7 +80,6 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
 
   // 🛡️ Métodos requeridos por el CanDeactivate Guard
   puedeSalir(): boolean {
-    // 🌟 Permitimos salir libremente si el modal de éxito ya se mostró o si ya no hay asientos pendientes
     return this.mostrarModalExito() || this.misAsientos().length === 0;
   }
 
@@ -85,16 +90,16 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
         await this.entradasService.liberarAsiento(asiento.id);
       }
       this.misAsientos.set([]);
-      
-      // 🌟 Limpieza global obligatoria del Candy Bar y Asientos
+
       localStorage.removeItem('asientosSeleccionados');
       localStorage.removeItem('carritoCandyTemp');
-      this.itemsCandySeleccionados.set([]); 
-      this.productosService.limpiarCarritoTemp(); // 👈 Limpiamos la memoria del servicio
+      this.itemsCandySeleccionados.set([]);
+      this.productosService.limpiarCarritoTemp();
     } catch (err) {
       console.error('Error al liberar asientos desde el checkout:', err);
     }
   }
+
   async ngOnInit(): Promise<void> {
     const idParam = this.route.snapshot.paramMap.get('funcionId') || '';
     this.funcionId.set(idParam);
@@ -129,6 +134,15 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     if (authData?.user) {
       this.usuarioId.set(authData.user.id);
       await this.cargarCuponesDelCliente(authData.user.id);
+      const { data: perfilCliente } = await supabase
+        .from('clientes')
+        .select('dinero, puntos, creditos')
+        .eq('id', authData.user.id)
+        .single();
+
+      this.dineroDisponibleCliente.set(Number(perfilCliente?.dinero || 0));
+      this.puntosDisponiblesCliente.set(Number(perfilCliente?.puntos || 0));
+      this.creditosDisponiblesCliente.set(Number(perfilCliente?.creditos || 0));
     } else {
       this.usuarioId.set(null);
       const anonimoStr = localStorage.getItem('clienteAnonimo');
@@ -152,6 +166,30 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     }
 
     await this.cargarDatosCheckout();
+  }
+
+  private esMetodoCredito(metodo: string): boolean {
+    const m = (metodo || '').toLowerCase();
+    return m === 'credito' || m === 'creditos' || m ==='mixto';
+  }
+
+  private obtenerPorcentajeCupon(cupon: any): number {
+    const raw =
+      cupon?.discount_percentage ??
+      cupon?.descuento ??
+      cupon?.porcentaje_descuento ??
+      cupon?.porcentaje ??
+      0;
+    const num = Number(raw);
+    return Number.isNaN(num) ? 0 : Math.max(0, num);
+  }
+
+  get porcentajeDescuentoCupones(): number {
+    const cupones = this.cuponesAplicados();
+    if (!cupones || cupones.length === 0) return 0;
+
+    const suma = cupones.reduce((acc, c) => acc + this.obtenerPorcentajeCupon(c), 0);
+    return Math.min(100, suma);
   }
 
   async cargarCuponesDelCliente(userId: string): Promise<void> {
@@ -197,8 +235,9 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
       return;
     }
 
-    const nuevoCupón = resultado.cupon;
-    const esNuevoBienvenida = nuevoCupón.is_welcome || nuevoCupón.tipo === 'bienvenida';
+    const nuevoCupon = resultado.cupon;
+    const porcentaje = this.obtenerPorcentajeCupon(nuevoCupon);
+    const esNuevoBienvenida = nuevoCupon.is_welcome || nuevoCupon.tipo === 'bienvenida';
 
     let nuevaLista = [...actuales];
 
@@ -208,10 +247,10 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
         this.mensajeCupon.set('Ya has aplicado el cupón de bienvenida.');
         return;
       }
-      nuevaLista.push(nuevoCupón);
+      nuevaLista.push(nuevoCupon);
     } else {
       nuevaLista = nuevaLista.filter((c) => c.is_welcome || c.tipo === 'bienvenida');
-      nuevaLista.push(nuevoCupón);
+      nuevaLista.push(nuevoCupon);
     }
 
     if (nuevaLista.length > 2) {
@@ -222,9 +261,7 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
 
     this.cuponesAplicados.set(nuevaLista);
     this.codigoCuponInput.set('');
-    this.mensajeCupon.set(
-      `¡Cupón "${nuevoCupón.code}" aplicado con éxito! (${nuevoCupón.discount_percentage}% desc)`,
-    );
+    this.mensajeCupon.set(`¡Cupón "${nuevoCupon.code}" aplicado con éxito! (${porcentaje}% desc)`);
   }
 
   async cargarDatosCheckout(): Promise<void> {
@@ -288,14 +325,31 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     }
   }
 
+  get entradasCubiertasPorCombos(): number {
+    const items = this.itemsCandySeleccionados();
+    if (!items || items.length === 0) return 0;
+
+    return items.reduce((acc, item) => {
+      if (!item?.esCombo || !item?.incluye_entrada) return acc;
+      const cantCombos = Number(item.cantidad || item.cantidadDeseada || 0);
+      const cantEntradasPorCombo = Number(item.cantidad_entradas || 1);
+      return acc + cantCombos * cantEntradasPorCombo;
+    }, 0);
+  }
+
+  get entradasFacturablesSueltas(): number {
+    const totalAsientos = Number(this.misAsientos()?.length || 0);
+    return Math.max(0, totalAsientos - this.entradasCubiertasPorCombos);
+  }
+
   get totalEntradasPesos(): number {
     const precio = Number(this.funcionData()?.precio_pesos || 0);
-    return Number(this.misAsientos()?.length || 0) * precio;
+    return this.entradasFacturablesSueltas * precio;
   }
 
   get totalEntradasPuntos(): number {
     const precioPts = Number(this.funcionData()?.precio_puntos || 0);
-    return Number(this.misAsientos()?.length || 0) * precioPts;
+    return this.entradasFacturablesSueltas * precioPts;
   }
 
   get totalCandyPesos(): number {
@@ -318,46 +372,75 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     }, 0);
   }
 
+  // 🔹 Método mixto: toma primero los créditos disponibles y luego completa con dinero disponible
+  private esMetodoMixto(metodo: string): boolean {
+    const m = (metodo || '').toLowerCase();
+    return m === 'mixto' || m === 'credito' || m === 'creditos';
+  }
+
+  private calcularDesgloseMixtoCredito(
+    totalGeneral: number,
+    creditosDisponibles: number,
+    dineroDisponible: number,
+    creditosDeseados?: number,
+  ) {
+    const total = Math.max(0, Number(totalGeneral || 0));
+    const credDisp = Math.max(0, Number(creditosDisponibles || 0));
+    const dinDisp = Math.max(0, Number(dineroDisponible || 0));
+
+    const topePorCompraYSaldo = Math.min(total, credDisp);
+    const deseado =
+      creditosDeseados !== undefined && creditosDeseados !== null && !Number.isNaN(Number(creditosDeseados))
+        ? Math.max(0, Number(creditosDeseados))
+        : topePorCompraYSaldo;
+
+    const creditosAplicados = Number(Math.min(topePorCompraYSaldo, deseado).toFixed(2));
+    const restanteTrasCreditos = Number(Math.max(0, total - creditosAplicados).toFixed(2));
+    const dineroAplicado = Number(Math.min(restanteTrasCreditos, dinDisp).toFixed(2));
+    const faltanteTotal = Number(Math.max(0, restanteTrasCreditos - dineroAplicado).toFixed(2));
+
+    return {
+      creditosAplicados,
+      restanteTrasCreditos,
+      dineroAplicado,
+      faltanteTotal,
+    };
+  }
+
+  get subtotalBrutoPesos(): number {
+    return Number((this.totalEntradasPesos + this.totalCandyPesos).toFixed(2));
+  }
+
+  get montoDescuentoPesos(): number {
+    const porcentaje = this.porcentajeDescuentoCupones;
+    if (porcentaje <= 0) return 0;
+    return Number(((this.subtotalBrutoPesos * porcentaje) / 100).toFixed(2));
+  }
+
   get totalPagar(): number {
-    const subtotalEntradas = this.totalEntradasPesos;
-    const subtotalCandy = this.totalCandyPesos;
-    const subtotalBruto = subtotalEntradas + subtotalCandy;
+    return Number(Math.max(0, this.subtotalBrutoPesos - this.montoDescuentoPesos).toFixed(2));
+  }
 
-    const cupones = this.cuponesAplicados();
-    if (cupones.length === 0) return subtotalBruto;
+  get subtotalBrutoPuntos(): number {
+    return this.totalEntradasPuntos + this.totalCandyPuntos;
+  }
 
-    const porcentajeTotalDescuento = cupones.reduce(
-      (acc, c) => acc + Number(c.discount_percentage || 0),
-      0,
-    );
-
-    const montoDescuento = (subtotalEntradas * porcentajeTotalDescuento) / 100;
-    return Math.max(0, subtotalBruto - montoDescuento);
+  get descuentoPuntos(): number {
+    const porcentaje = this.porcentajeDescuentoCupones;
+    if (porcentaje <= 0) return 0;
+    return Math.round((this.subtotalBrutoPuntos * porcentaje) / 100);
   }
 
   get totalPuntos(): number {
-    const subtotalEntradasPts = this.totalEntradasPuntos;
-    const subtotalCandyPts = this.totalCandyPuntos;
-    const subtotalBrutoPts = subtotalEntradasPts + subtotalCandyPts;
-
-    const cupones = this.cuponesAplicados();
-    if (cupones.length === 0) return subtotalBrutoPts;
-
-    const porcentajeTotalDescuento = cupones.reduce(
-      (acc, c) => acc + Number(c.discount_percentage || 0),
-      0,
-    );
-
-    const descuentoPuntos = (subtotalEntradasPts * porcentajeTotalDescuento) / 100;
-    return Math.max(0, subtotalBrutoPts - descuentoPuntos);
+    return Math.max(0, this.subtotalBrutoPuntos - this.descuentoPuntos);
   }
 
   trackByItemCandy(index: number, item: any): any {
     return item.id || item.producto_id || item.nombre;
   }
+
   async validarRestriccionEdad(usuarioId: string, peliculaId: string): Promise<boolean> {
     try {
-      // 1. Obtener la fecha de nacimiento del cliente
       const { data: cliente, error: errCliente } = await supabase
         .from('clientes')
         .select('fecha_nacimiento')
@@ -365,19 +448,20 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
         .single();
 
       if (errCliente || !cliente?.fecha_nacimiento) {
-        return true; // Si no tiene fecha registrada, permite continuar
+        return true;
       }
 
-      // 2. Obtener la película asociada a la función actual (Es un objeto, no un array)
       const { data: funcion, error: errFuncion } = await supabase
         .from('funciones')
-        .select(`
+        .select(
+          `
           id,
           peliculas (
             nombre,
             limite_edad
           )
-        `)
+        `,
+        )
         .eq('id', this.funcionId())
         .single();
 
@@ -386,42 +470,93 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
         return true;
       }
 
-      // 🌟 Al ser un objeto único, accedemos directamente a sus propiedades
       const pelicula = funcion.peliculas as any;
       const limiteEdadPelicula = pelicula?.limite_edad || 'ATP';
       const nombrePeli = pelicula?.nombre || 'la película';
 
-      // 3. Calcular edades y comparar (esperando las promesas con await)
       const edadMinimaRequerida = await this.entradasService.obtenerEdadMinima(limiteEdadPelicula);
       const edadCliente = await this.entradasService.calcularEdadUsuario(cliente.fecha_nacimiento);
 
       if (Number(edadCliente) < Number(edadMinimaRequerida)) {
         this.mensajeEdadInsuficiente.set(
-          `Lo sentimos, "${nombrePeli}" es apta solo para mayores de ${edadMinimaRequerida} años.`
+          `Lo sentimos, "${nombrePeli}" es apta solo para mayores de ${edadMinimaRequerida} años.`,
         );
-        return false; // No cumple -> Bloquea la compra
+        return false;
       }
 
-      return true; // Sí cumple
+      return true;
     } catch (e) {
       console.error('Error al validar restricción de edad:', e);
-      return true; 
+      return true;
     }
+  }
+
+  private async obtenerIdsFisicosTotales(): Promise<any[]> {
+    const itemsBase = this.productosService.obtenerItemsSeleccionadosParaCheckout(
+      this.itemsCandySeleccionados(),
+    );
+
+    const combosSeleccionados = this.itemsCandySeleccionados().filter(
+      (item) => item?.esCombo && Array.isArray(item?.items) && item.items.length > 0,
+    );
+
+    if (combosSeleccionados.length === 0) {
+      return itemsBase;
+    }
+
+    const productosDisponibles = await this.productosService.getProductos();
+    const idsYaUsados = new Set<string>();
+
+    for (const itemBase of itemsBase) {
+      for (const id of itemBase.idsFisicos || []) {
+        idsYaUsados.add(id);
+      }
+    }
+
+    const extrasCombo: any[] = [];
+
+    for (const combo of combosSeleccionados) {
+      const cantCombos = Number(combo.cantidad || combo.cantidadDeseada || 1);
+
+      for (const comp of combo.items) {
+        const cantNecesaria = (Number(comp.cantidad) || 1) * cantCombos;
+        const candidatas = productosDisponibles.filter((p) => {
+          if (!p.id || idsYaUsados.has(p.id) || p.estado !== 'disponible') return false;
+          const matchNombre = comp.producto_nombre
+            ? p.nombre.trim().toLowerCase() === comp.producto_nombre.trim().toLowerCase()
+            : true;
+          const matchCategoria = comp.categoria
+            ? p.categoria.trim().toLowerCase() === comp.categoria.trim().toLowerCase()
+            : true;
+          return matchNombre && matchCategoria;
+        });
+
+        const tomados = candidatas.slice(0, cantNecesaria);
+        tomados.forEach((t) => idsYaUsados.add(t.id!));
+
+        if (tomados.length > 0) {
+          extrasCombo.push({
+            nombre: `${comp.producto_nombre || comp.categoria} (Combo: ${combo.nombre})`,
+            precio: 0,
+            cantidad: tomados.length,
+            idsFisicos: tomados.map((t) => t.id!),
+          });
+        }
+      }
+    }
+
+    return [...itemsBase, ...extrasCombo];
   }
 
   // 🌟 CONFIRMACIÓN DE PAGO CON VERIFICACIÓN DE SALDO EN CLIENTES
   async confirmarPagoFinal(): Promise<void> {
     const uId = this.usuarioId();
     if (uId) {
-      // Validamos la edad antes de procesar cualquier pago
       const cumpleEdad = await this.validarRestriccionEdad(uId, this.funcionId());
       if (!cumpleEdad) {
-        // 1. Liberamos los asientos y limpiamos el carrito temporal de candy
         await this.liberarAsientosTemporales();
-        
-        // 2. Mostramos el modal de error de edad de forma explícita
         this.mostrarModalEdadInsuficiente.set(true);
-        return; // 🛑 Detenemos por completo el flujo de pago sin dar paso a verificación de saldo
+        return;
       }
     }
 
@@ -433,10 +568,8 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
 
       const totalGeneral = this.totalPagar;
       const totalGeneralPuntos = this.totalPuntos;
-      const uId = this.usuarioId();
-      const metodo = this.metodoPago(); // 'efectivo' (dinero) o 'puntos'
+      const metodo = this.metodoPago();
 
-      // Si es anónimo, se mantiene el flujo de monto ingresado manual
       if (!uId) {
         const montoIngresado = Number(this.montoIngresadoAnonimo());
         if (montoIngresado !== Number(totalGeneral)) {
@@ -444,9 +577,7 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
           return;
         }
 
-        const itemsConIdsFisicos = this.productosService.obtenerItemsSeleccionadosParaCheckout(
-          this.itemsCandySeleccionados(),
-        );
+        const itemsConIdsFisicos = await this.obtenerIdsFisicosTotales();
         const itemsCandyParaJson = this.itemsCandySeleccionados().map((item) => ({
           id: item.id || item.producto_id,
           nombre: item.nombre,
@@ -467,14 +598,12 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
         localStorage.removeItem('asientosSeleccionados');
         this.itemsCandySeleccionados.set([]);
         this.productosService.limpiarCarritoTemp();
-        // 🌟 Marcamos el éxito y vaciamos los asientos locales para permitir la salida
         this.codigoRetiroExitoso.set(codigoUnico);
         this.mostrarModalExito.set(true);
         this.misAsientos.set([]);
         return;
       }
 
-      // 1. Consultar saldo actual del cliente en Supabase
       const { data: clienteData, error: clienteError } = await supabase
         .from('clientes')
         .select('dinero, puntos, creditos')
@@ -485,14 +614,31 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
         throw new Error('No se pudo verificar el saldo de tu cuenta.');
       }
 
-      // 2. Verificar si alcanza el saldo según el método de pago seleccionado
+      const dineroActual = Number(clienteData.dinero || 0);
+      const creditosActuales = Number(clienteData.creditos || 0);
+      this.creditosDisponiblesCliente.set(creditosActuales);
+
       if (metodo === 'efectivo') {
-        const dineroActual = Number(clienteData.dinero || 0);
         if (dineroActual < totalGeneral) {
-          // 🛑 Saldo insuficiente en dinero: Abrimos el modal
           this.saldoActualCliente.set(dineroActual);
           this.montoFaltante.set(Number((totalGeneral - dineroActual).toFixed(2)));
-          this.montoACargarInput.set(Number((totalGeneral - dineroActual).toFixed(2))); // Sugerencia inicial justa
+          this.montoACargarInput.set(Number((totalGeneral - dineroActual).toFixed(2)));
+          this.mensajeErrorCarga.set('');
+          this.mostrarModalSaldoInsuficiente.set(true);
+          return;
+        }
+      } else if (this.esMetodoCredito(metodo)) {
+        const { faltanteTotal } = this.calcularDesgloseMixtoCredito(
+          totalGeneral,
+          creditosActuales,
+          dineroActual,
+        );
+
+        if (faltanteTotal > 0) {
+          const saldoCombinado = Number((dineroActual + creditosActuales).toFixed(2));
+          this.saldoActualCliente.set(saldoCombinado);
+          this.montoFaltante.set(faltanteTotal);
+          this.montoACargarInput.set(faltanteTotal);
           this.mensajeErrorCarga.set('');
           this.mostrarModalSaldoInsuficiente.set(true);
           return;
@@ -506,7 +652,6 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
         }
       }
 
-      // 3. Si tiene saldo suficiente, procesamos la compra directamente
       await this.ejecutarTransaccionCompra(uId, totalGeneral, totalGeneralPuntos, metodo);
     } catch (error: any) {
       console.error(`Error al procesar el pago: ${error.message}`);
@@ -520,9 +665,7 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     totalGeneralPuntos: number,
     metodo: string,
   ): Promise<void> {
-    const itemsConIdsFisicos = this.productosService.obtenerItemsSeleccionadosParaCheckout(
-      this.itemsCandySeleccionados(),
-    );
+    const itemsConIdsFisicos = await this.obtenerIdsFisicosTotales();
     const itemsCandyParaJson = this.itemsCandySeleccionados().map((item) => ({
       id: item.id || item.producto_id,
       nombre: item.nombre,
@@ -540,9 +683,44 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
       const nuevoDinero = Number((dineroActual - totalGeneral).toFixed(2));
       const nuevosPuntos = Number(clienteData?.puntos || 0) + Math.floor(totalGeneral);
 
+      this.creditosAUsar.set(0);
+      this.dineroAUsar.set(totalGeneral);
+
       await supabase
         .from('clientes')
         .update({ dinero: nuevoDinero, puntos: nuevosPuntos })
+        .eq('id', uId);
+    } else if (this.esMetodoCredito(metodo)) {
+      const { data: clienteData } = await supabase
+        .from('clientes')
+        .select('dinero, puntos, creditos')
+        .eq('id', uId)
+        .single();
+
+      const dineroActual = Number(clienteData?.dinero || 0);
+      const creditosActuales = Number(clienteData?.creditos || 0);
+
+      const { creditosAplicados, dineroAplicado } = this.calcularDesgloseMixtoCredito(
+        totalGeneral,
+        creditosActuales,
+        dineroActual,
+      );
+
+      const nuevoCredito = Number((creditosActuales - creditosAplicados).toFixed(2));
+      const nuevoDinero = Number((dineroActual - dineroAplicado).toFixed(2));
+      const nuevosPuntos = Number(clienteData?.puntos || 0) + Math.floor(totalGeneral);
+
+      this.creditosAUsar.set(creditosAplicados);
+      this.dineroAUsar.set(dineroAplicado);
+      this.creditosDisponiblesCliente.set(nuevoCredito);
+
+      await supabase
+        .from('clientes')
+        .update({
+          creditos: nuevoCredito,
+          dinero: nuevoDinero,
+          puntos: nuevosPuntos,
+        })
         .eq('id', uId);
     } else if (metodo === 'puntos') {
       const { data: clienteData } = await supabase
@@ -552,6 +730,9 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
         .single();
       const puntosActuales = Number(clienteData?.puntos || 0);
       const nuevosPuntos = puntosActuales - totalGeneralPuntos;
+
+      this.creditosAUsar.set(0);
+      this.dineroAUsar.set(0);
 
       await supabase.from('clientes').update({ puntos: nuevosPuntos }).eq('id', uId);
     }
@@ -565,7 +746,6 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
       totalGeneral,
     );
 
-    // Marcar cupones como usados
     for (const cupon of this.cuponesAplicados()) {
       if (cupon.userCouponId) {
         await this.adminCuponesService.marcarCuponComoUsado(cupon.userCouponId);
@@ -574,7 +754,7 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     await this.pdfService.generarComprobanteEntrada({
       codigoUnico,
       asientos: this.misAsientos(),
-      itemsCandy: this.itemsCandySeleccionados(), // 👈 Pasamos los snacks al servicio PDF
+      itemsCandy: this.itemsCandySeleccionados(),
       total: totalGeneral,
       metodoPago: metodo,
     });
@@ -587,7 +767,6 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     this.codigoRetiroExitoso.set(codigoUnico);
     this.mostrarModalExito.set(true);
 
-    // 🌟 Vaciamos los asientos locales para permitir la salida inmediata del guard
     this.misAsientos.set([]);
   }
 
@@ -596,7 +775,6 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     const uId = this.usuarioId();
     if (!uId) return;
 
-    // 🌟 Validamos la edad también antes de reintentar el pago tras cargar saldo
     const cumpleEdad = await this.validarRestriccionEdad(uId, this.funcionId());
     if (!cumpleEdad) {
       this.mostrarModalSaldoInsuficiente.set(false);
@@ -607,8 +785,21 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
 
     const montoACargar = Number(this.montoACargarInput());
     const totalGeneral = this.totalPagar;
-    const dineroActual = this.saldoActualCliente();
-    const faltanteMinimo = totalGeneral - dineroActual;
+    const metodo = this.metodoPago();
+
+    const { data: clienteRefrescado } = await supabase
+      .from('clientes')
+      .select('dinero, creditos')
+      .eq('id', uId)
+      .single();
+
+    const dineroActual = Number(clienteRefrescado?.dinero || 0);
+    const creditosActuales = Number(clienteRefrescado?.creditos || 0);
+
+    const faltanteMinimo = this.esMetodoCredito(metodo)
+      ? this.calcularDesgloseMixtoCredito(totalGeneral, creditosActuales, dineroActual)
+          .faltanteTotal
+      : Number(Math.max(0, totalGeneral - dineroActual).toFixed(2));
 
     if (montoACargar < faltanteMinimo) {
       this.mensajeErrorCarga.set(
@@ -629,7 +820,7 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
       if (error) throw error;
 
       this.mostrarModalSaldoInsuficiente.set(false);
-      await this.ejecutarTransaccionCompra(uId, totalGeneral, this.totalPuntos, this.metodoPago());
+      await this.ejecutarTransaccionCompra(uId, totalGeneral, this.totalPuntos, metodo);
     } catch (error: any) {
       this.mensajeErrorCarga.set(`Error al cargar saldo: ${error.message}`);
     }

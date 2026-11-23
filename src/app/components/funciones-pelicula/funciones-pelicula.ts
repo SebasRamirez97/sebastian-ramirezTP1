@@ -3,11 +3,12 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common'; 
 import { Location } from '@angular/common';
 import { FuncionesService } from '../../services/funciones'; 
+import { OcultarSiStaffDirective } from '../../directives/ocultar-si-staff.directive';
 
 @Component({
   selector: 'app-funciones-pelicula',
   standalone: true,
-  imports: [RouterLink, CommonModule], 
+  imports: [RouterLink, CommonModule, OcultarSiStaffDirective], 
   templateUrl: './funciones-pelicula.html',
   styleUrls: ['./funciones-pelicula.css']
 })

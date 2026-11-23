@@ -4,6 +4,7 @@ import { AuthService } from '../../services/auth.service';
 import { FormGroup, FormControl, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { SelectorFechaComponent } from '../selector-fecha/selector-fecha';
+import { NoFechaFuturaDirective } from '../../directives/no-fecha-futura.directive';
 
 export function mayorDeEdadValidator(edadMinima: number): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
@@ -39,7 +40,7 @@ export const passwordsCoincidenValidator: ValidatorFn = (control: AbstractContro
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [ReactiveFormsModule, CommonModule, SelectorFechaComponent],
+  imports: [ReactiveFormsModule, CommonModule, SelectorFechaComponent, NoFechaFuturaDirective],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.css']
 })

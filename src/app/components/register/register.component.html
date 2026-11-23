@@ -50,7 +50,7 @@
     <!-- Fecha de nacimiento -->
     <div class="form-group">
       <label class="form-label text-muted small fw-semibold">Fecha de Nacimiento</label>
-      <app-selector-fecha (fechaSeleccionada)="formCliente.get('fechaNacimiento')?.setValue($event)"></app-selector-fecha>
+      <app-selector-fecha appNoFechaFutura (fechaSeleccionada)="formCliente.get('fechaNacimiento')?.setValue($event)"></app-selector-fecha>
 
       <div *ngIf="submitted() && formCliente.get('fechaNacimiento')?.invalid" class="error mt-1">
         <span *ngIf="formCliente.get('fechaNacimiento')?.hasError('required')">Campo incompleto</span>

@@ -6,11 +6,11 @@ import { PeliculasService } from '../../services/peliculas';
 import { Pelicula } from '../../models/pelicula.model';
 import { FormatoSala } from '../../models/funcion.model';
 import { SelectorFechaComponent } from '../selector-fecha/selector-fecha'; // 👈 Importamos el selector de fecha
-
+import { NoFechaPasadaDirective } from '../../directives/no-fecha-pasada.directive';
 @Component({
   selector: 'app-crear-funcion',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, SelectorFechaComponent], // 👈 Agregado a los imports
+  imports: [CommonModule, ReactiveFormsModule, SelectorFechaComponent, NoFechaPasadaDirective], // 👈 Agregado a los imports
   templateUrl: './crear-funcion.html',
   styleUrls: ['./crear-funcion.css'],
 })
@@ -35,6 +35,11 @@ export class CrearFuncionComponent implements OnInit {
   ngOnInit(): void {
     this.inicializarFormulario();
     this.cargarPeliculas();
+
+    // Cada vez que cambie la hora_inicio, verificamos si la fecha es hoy y no es pasada
+    this.funcionForm.get('hora_inicio')?.valueChanges.subscribe(() => {
+      this.validarHoraSiEsHoy();
+    });
   }
 
   private inicializarFormulario(): void {
@@ -60,7 +65,57 @@ export class CrearFuncionComponent implements OnInit {
   // 🌟 Captura la fecha emitida por el SelectorFechaComponent
   onFechaCambiada(fecha: string): void {
     this.fechaSeleccionadaStr = fecha;
+    this.validarHoraSiEsHoy();
   }
+
+  private validarHoraSiEsHoy(): void {
+    const fechaISO = this.normalizarFechaISO(this.fechaSeleccionadaStr);
+    const hoyISO = this.obtenerFechaHoyLocal();
+
+    if (!fechaISO || fechaISO !== hoyISO) {
+      return; // Si es una fecha futura, cualquier horario es válido
+    }
+
+    const horaControl = this.funcionForm.get('hora_inicio');
+    const horaIngresada = horaControl?.value;
+    if (!horaIngresada) return;
+
+    const horaActual = this.obtenerHoraActualLocal(); // formato "HH:mm"
+    if (horaIngresada < horaActual) {
+      horaControl?.setValue(horaActual, { emitEvent: false });
+    }
+  }
+
+  private obtenerFechaHoyLocal(): string {
+    const ahora = new Date();
+    const anio = ahora.getFullYear();
+    const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+    const dia = String(ahora.getDate()).padStart(2, '0');
+    return `${anio}-${mes}-${dia}`;
+  }
+
+  private obtenerHoraActualLocal(): string {
+    const ahora = new Date();
+    const horas = String(ahora.getHours()).padStart(2, '0');
+    const minutos = String(ahora.getMinutes()).padStart(2, '0');
+    return `${horas}:${minutos}`;
+  }
+
+  // Soporta tanto "YYYY-MM-DD" como "DD/MM/YYYY" por si formatearFechaLocal devuelve barras
+  private normalizarFechaISO(fecha: string): string {
+    if (!fecha) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      return fecha;
+    }
+    const partes = fecha.split('/');
+    if (partes.length === 3) {
+      const [dia, mes, anio] = partes;
+      return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+    }
+    return fecha;
+  }
+
+
 
   trackByPelicula(index: number, pelicula: Pelicula): string | undefined {
     return pelicula.id;
@@ -83,28 +138,39 @@ export class CrearFuncionComponent implements OnInit {
       return;
     }
 
+    // Forzamos la validación del horario si la fecha elegida es hoy antes de armar el DTO
+    this.validarHoraSiEsHoy();
+
     this.cargando.set(true);
     this.mensajeExito.set(null);
     this.mensajeError.set(null);
 
     try {
       const formValue = this.funcionForm.value;
+      const fechaISO = this.normalizarFechaISO(this.fechaSeleccionadaStr);
 
-      // Unimos la fecha seleccionada por el componente con la hora ingresada (ej: "2026-10-15" + "T" + "18:00")
-      const fechaHoraCompleta = `${this.fechaSeleccionadaStr}T${formValue.hora_inicio}:00`;
+      // Unimos la fecha normalizada (YYYY-MM-DD) con la hora ingresada (ej: "2026-11-22" + "T" + "18:00:00")
+      const fechaHoraCompleta = `${fechaISO}T${formValue.hora_inicio}:00`;
+      const fechaDate = new Date(fechaHoraCompleta);
+
+      if (isNaN(fechaDate.getTime())) {
+        throw new Error('La fecha u hora seleccionada no es válida.');
+      }
 
       const dto = {
         pelicula_id: formValue.pelicula_id,
         formato: formValue.formato,
-        idioma: formValue.idioma, // 👈 Enviamos el idioma
-        fecha_inicio: new Date(fechaHoraCompleta).toISOString(),
+        idioma: formValue.idioma,
+        fecha_inicio: fechaDate.toISOString(),
         precio_pesos: formValue.precio_pesos,
         precio_puntos: formValue.precio_puntos,
       };
 
       const nuevaFuncion = await this.funcionesService.crearFuncion(dto);
 
-      this.mensajeExito.set(`¡Función creada con éxito! Se le asignó automáticamente la sala ID: ${nuevaFuncion.sala_id}.`);
+      this.mensajeExito.set(
+        `¡Función creada con éxito! Se le asignó automáticamente la sala ID: ${nuevaFuncion.sala_id}.`
+      );
       this.funcionForm.patchValue({
         formato: '2D',
         idioma: 'Castellano',

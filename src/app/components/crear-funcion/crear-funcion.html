@@ -46,7 +46,7 @@
     <!-- 🌟 Componente Selector de Fecha Personalizado -->
     <div class="form-group">
       <label>Fecha de la Función:</label>
-      <app-selector-fecha (fechaSeleccionada)="onFechaCambiada($event)"></app-selector-fecha>
+      <app-selector-fecha appNoFechaPasada (fechaSeleccionada)="onFechaCambiada($event)"></app-selector-fecha>
     </div>
 
     <!-- Hora de Inicio -->
@@ -63,6 +63,7 @@
       </span>
     </div>
 
+    
     <!-- Precio en Pesos -->
     <div class="form-group">
       <label for="precio_pesos">Precio Base (Pesos $):</label>

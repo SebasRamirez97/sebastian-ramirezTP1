@@ -76,7 +76,7 @@ export class CrearProductoComponent {
         await this.productosService.agregarStockMasivo(productoCreado, cantidadStock - 1);
       }
 
-      this.router.navigate(['/admin/productos']);
+      this.router.navigate(['/candybar']);
     } catch (error: any) {
       console.error('Error al agregar producto:', error);
       alert('Ocurrió un error al guardar el producto: ' + (error.message || ''));
@@ -89,6 +89,6 @@ export class CrearProductoComponent {
     this.submitted.set(false);
     this.selectedFile.set(null);
     this.formProducto.reset();
-    this.router.navigate(['/prodcutos']);
+    this.router.navigate(['/candybar']);
   }
 }

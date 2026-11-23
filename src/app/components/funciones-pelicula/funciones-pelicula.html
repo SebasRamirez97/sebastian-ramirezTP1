@@ -40,7 +40,7 @@
           </div>
 
           <div class="funcion-accion">
-            <button [routerLink]="['/seleccionar-asientos', funcion.id]" class="btn-comprar">Comprar Entradas</button>
+            <button *appOcultarSiStaff="['empleado', 'admin']" [routerLink]="['/seleccionar-asientos', funcion.id]" class="btn-comprar">Comprar Entradas</button>
           </div>
         </div>
       </div>

@@ -65,35 +65,29 @@
       
       <div class="opcion-pago">
         <input type="radio" id="efectivo" value="efectivo" [ngModel]="metodoPago()" (ngModelChange)="metodoPago.set($event)" name="metodoPago">
-        <label for="efectivo">💵 Dinero en cuenta</label>
+        <label for="efectivo">
+          💵 Dinero en cuenta
+          <span class="text-muted small">(${{ dineroDisponibleCliente() | number:'1.2-2' }} disponibles)</span>
+        </label>
       </div>
 
       <div class="opcion-pago">
         <input type="radio" id="puntos" value="puntos" [ngModel]="metodoPago()" (ngModelChange)="metodoPago.set($event)" name="metodoPago">
-        <label for="puntos">⭐ Puntos</label>
+        <label for="puntos">
+          ⭐ Puntos
+          <span class="text-muted small">({{ puntosDisponiblesCliente() }} pts disponibles)</span>
+        </label>
       </div>
 
       <div class="opcion-pago">
         <input type="radio" id="mixto" value="mixto" [ngModel]="metodoPago()" (ngModelChange)="metodoPago.set($event)" name="metodoPago">
-        <label for="mixto">💳 Mixto (Dinero + Créditos)</label>
+        <label for="mixto">
+          💳 Mixto (Dinero + Créditos)
+          <span class="text-muted small">
+            (${{ creditosDisponiblesCliente() | number:'1.2-2' }} créditos / ${{ dineroDisponibleCliente() | number:'1.2-2' }} dinero disponibles)
+          </span>
+        </label>
       </div>
-    </div>
-
-    <!-- Sección que aparece solo si selecciona Pago Mixto -->
-    <div *ngIf="metodoPago() === 'mixto'" class="seccion-mixto">
-      <label for="creditosUsar">¿Cuántos créditos deseas aplicar?</label>
-      <input 
-        type="number" 
-        id="creditosUsar" 
-        [ngModel]="creditosAUsar()" 
-        (ngModelChange)="creditosAUsar.set($event)"
-        min="0" 
-        [max]="totalPagar"
-        class="input-creditos"
-      />
-      <p class="detalle-calculo">
-        Aplicando <strong>{{ creditosAUsar() || 0 }} créditos</strong>, pagarás el resto con <strong>${{ (totalPagar - (creditosAUsar() || 0)) | number:'1.2-2' }}</strong> de tu saldo en dinero.
-      </p>
     </div>
 
     <!-- Simulación de pago para usuarios anónimos (Invitados) -->
