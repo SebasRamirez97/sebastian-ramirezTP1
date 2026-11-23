@@ -11,6 +11,28 @@
   </div>
 
   <ng-template #contenidoSala>
+    <!-- Tarifas General vs VIP -->
+    <div class="tarifas-entradas-box" *ngIf="funcion()">
+      <div class="tarifa-card tarifa-general">
+        <div class="tarifa-titulo">🎟️ Entrada General</div>
+        <div class="tarifa-precio-pesos">${{ precioGeneralPesos() | number : '1.0-2' }}</div>
+        <div class="tarifa-precio-puntos" *ngIf="precioGeneralPuntos() > 0">
+          o {{ precioGeneralPuntos() | number }} pts
+        </div>
+        <small class="tarifa-detalle">Filas A – Q</small>
+      </div>
+
+      <div class="tarifa-card tarifa-vip">
+        <div class="tarifa-badge">⭐ +100%</div>
+        <div class="tarifa-titulo">👑 Entrada VIP</div>
+        <div class="tarifa-precio-pesos">${{ precioVipPesos() | number : '1.0-2' }}</div>
+        <div class="tarifa-precio-puntos" *ngIf="precioVipPuntos() > 0">
+          o {{ precioVipPuntos() | number }} pts
+        </div>
+        <small class="tarifa-detalle">Filas R, S y T</small>
+      </div>
+    </div>
+
     <!-- Selector de Cantidad de Entradas -->
     <div class="selector-cantidad-container">
       <label>¿Cuántas entradas deseas comprar?</label>
@@ -37,10 +59,13 @@
         class="fila-container"
         [ngClass]="{
           'fila-discapacitados': fila === 'J-K',
-          'fila-vip': fila === 'R' || fila === 'S' || fila === 'T',
+          'fila-vip': esVip(fila),
         }"
       >
-        <span class="letra-fila">{{ fila }}</span>
+        <span class="letra-fila">
+          {{ fila }}
+          <span *ngIf="esVip(fila)" class="etiqueta-vip-fila">VIP</span>
+        </span>
 
         <!-- Contenedor de los 3 bloques de la fila -->
         <div class="bloques-asientos">
@@ -52,7 +77,7 @@
               [ngClass]="obtenerObjetoClases(fila, num)"
               [disabled]="isAsientoDeshabilitado(fila, num)"
               (click)="seleccionarAsiento(fila, num)"
-              title="Fila {{ fila }} Asiento {{ num }}"
+              title="Fila {{ fila }} Asiento {{ num }}{{ esVip(fila) ? ' (VIP)' : ' (General)' }} - ${{ obtenerPrecioUnitarioAsientoPesos(fila) | number : '1.0-2' }}"
             >
               {{ num }}
             </button>
@@ -68,7 +93,7 @@
               [ngClass]="obtenerObjetoClases(fila, num)"
               [disabled]="isAsientoDeshabilitado(fila, num)"
               (click)="seleccionarAsiento(fila, num)"
-              title="Fila {{ fila }} Asiento {{ num }}"
+              title="Fila {{ fila }} Asiento {{ num }}{{ esVip(fila) ? ' (VIP)' : ' (General)' }} - ${{ obtenerPrecioUnitarioAsientoPesos(fila) | number : '1.0-2' }}"
             >
               {{ num }}
             </button>
@@ -84,7 +109,7 @@
               [ngClass]="obtenerObjetoClases(fila, num)"
               [disabled]="isAsientoDeshabilitado(fila, num)"
               (click)="seleccionarAsiento(fila, num)"
-              title="Fila {{ fila }} Asiento {{ num }}"
+              title="Fila {{ fila }} Asiento {{ num }}{{ esVip(fila) ? ' (VIP)' : ' (General)' }} - ${{ obtenerPrecioUnitarioAsientoPesos(fila) | number : '1.0-2' }}"
             >
               {{ num }}
             </button>
@@ -96,7 +121,8 @@
     <!-- Leyenda de Colores -->
     <div class="leyenda">
       <div class="item-leyenda"><span class="cuadrito-asiento-libre"></span> Libre</div>
-      <div class="item-leyenda"><span class="cuadrito-asiento-mio"></span> Seleccion</div>
+      <div class="item-leyenda"><span class="cuadrito-asiento-vip-muestra"></span> VIP (+100%)</div>
+      <div class="item-leyenda"><span class="cuadrito-asiento-mio"></span> Selección</div>
       <div class="item-leyenda"><span class="cuadrito-asiento-mio-comprado"></span> Mis Asientos</div>
       <div class="item-leyenda"><span class="cuadrito-asiento-ocupado"></span> Ocupado</div>
     </div>
@@ -107,22 +133,36 @@
 
       <div *ngIf="misAsientosSeleccionados().length > 0">
         <div class="lista-seleccionados-grupo">
-          <!-- Mostramos las coordenadas de todos los asientos juntos con let isLast = last corregido -->
           <p class="coordenadas-texto">
             <strong>Butacas:</strong>
-            <span *ngFor="let asiento of misAsientosSeleccionados(); trackBy: trackByAsiento; let isLast = last">
-              {{ asiento.fila }}-{{ asiento.numero_asiento }}{{ !isLast ? ', ' : '' }}
+            <span
+              *ngFor="
+                let asiento of misAsientosSeleccionados();
+                trackBy: trackByAsiento;
+                let isLast = last
+              "
+            >
+              {{ asiento.fila }}-{{ asiento.numero_asiento }}
+              <strong *ngIf="esVip(asiento.fila)">[VIP]</strong>{{ !isLast ? ', ' : '' }}
+            </span>
+          </p>
+
+          <p class="subtotal-estimado">
+            <strong>Subtotal estimado:</strong> ${{ subtotalPesosSeleccionados() | number : '1.0-2' }}
+            <span *ngIf="subtotalPuntosSeleccionados() > 0">
+              / {{ subtotalPuntosSeleccionados() | number }} pts
             </span>
           </p>
         </div>
 
-        <div class="botones-acciones-compra" style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
-          <!-- Botón para ir al Candy Bar -->
+        <div
+          class="botones-acciones-compra"
+          style="display: flex; gap: 10px; justify-content: center; margin-top: 15px"
+        >
           <button class="btn btn-secundario" (click)="irAlCandyBar()">
             🍿 Agregar Snacks (Candy Bar)
           </button>
 
-          <!-- Botón de pago directo habitual -->
           <button class="btn btn-primary btn-pagar" (click)="procederAlPago()">
             Ir a Pagar / Resumen 🛒
           </button>

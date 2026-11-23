@@ -13,11 +13,18 @@ export interface Pelicula {
   nombre: string;
   fecha_estreno: string;
   imagen: string;
+  poster_url?: string;
   duracion: number;
   sinopsis: string;
-  genero: string[] | string;        // 👈 Nueva
-  limite_edad: string;    // 👈 Nueva
+  genero: string[] | string;
+  limite_edad: string;
   puntaje?: number;
   created_at?: string;
   cantidad_veces_vendida?: number;
+
+  // 🎟️ Configuración de preventa por película
+  preventa_activa?: boolean;
+  dias_preventa?: number; // Por defecto 7 días antes de fecha_estreno
+  precio_preventa_pesos?: number | null;
+  precio_preventa_puntos?: number | null;
 }

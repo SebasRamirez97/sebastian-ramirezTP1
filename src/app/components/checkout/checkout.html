@@ -8,23 +8,102 @@
 
   <ng-template #contenidoCargado>
     <div class="resumen-info">
-      <!-- Asientos -->
-      <p *ngIf="misAsientos().length > 0">
-        <strong>Asientos seleccionados:</strong> {{ misAsientos().length }} ( ${{ totalEntradasPesos | number:'1.2-2' }} )
-      </p>
+      <!-- 🎟️ Detalle de Asientos Elegidos -->
+      <div *ngIf="misAsientos().length > 0" class="resumen-asientos mb-3">
+        <h4>🎟️ Detalle de Butacas ({{ misAsientos().length }}):</h4>
+        <ul class="lista-detalle-items">
+          <li *ngFor="let asiento of asientosOrdenadosParaFacturacion" class="item-detalle-fila">
+            <div class="item-detalle-info">
+              <span class="badge-butaca">Fila {{ asiento.fila }} - Asiento {{ asiento.numero_asiento }}</span>
+              <span *ngIf="esAsientoVip(asiento.fila); else badgeGen" class="badge-tipo badge-vip">VIP</span>
+              <ng-template #badgeGen>
+                <span class="badge-tipo badge-general">General</span>
+              </ng-template>
+            </div>
 
-      <!-- 🍬 Lista de productos de Candy Bar -->
-      <div *ngIf="itemsCandySeleccionados().length > 0" class="resumen-candy">
-        <h4>🍿 Productos del Candy Bar:</h4>
-        <ul>
-          <li *ngFor="let item of itemsCandySeleccionados(); trackBy: trackByItemCandy">
-            {{ item.cantidad }}x {{ item.nombre }} - ${{ (item.precio * item.cantidad) | number:'1.2-2' }}
+            <div class="item-detalle-precio">
+              <ng-container *ngIf="esAsientoCubiertoPorCombo(asiento); else precioAsientoSuelto">
+                <span class="texto-incluido-combo">Incluida en combo</span>
+                <span
+                  *ngIf="esAsientoVip(asiento.fila) && diferenciaVipPesos > 0"
+                  class="texto-recargo-vip"
+                >
+                  (+${{ diferenciaVipPesos | number : '1.2-2' }} dif. VIP)
+                </span>
+              </ng-container>
+
+              <ng-template #precioAsientoSuelto>
+                <strong>${{ obtenerPrecioAsientoPesos(asiento.fila) | number : '1.2-2' }}</strong>
+                <span *ngIf="obtenerPrecioAsientoPuntos(asiento.fila) > 0" class="texto-pts">
+                  ({{ obtenerPrecioAsientoPuntos(asiento.fila) }} pts)
+                </span>
+              </ng-template>
+            </div>
           </li>
         </ul>
+
+        <div class="subtotal-linea">
+          <span>Subtotal entradas sueltas ({{ entradasFacturablesSueltas }}):</span>
+          <strong>
+            ${{ totalEntradasPesos | number : '1.2-2' }}
+            <span *ngIf="totalEntradasPuntos > 0">({{ totalEntradasPuntos }} pts)</span>
+          </strong>
+        </div>
+      </div>
+
+      <!-- 🍬 Lista de productos de Candy Bar y Combos -->
+      <div *ngIf="itemsCandySeleccionados().length > 0" class="resumen-candy">
+        <h4>🍿 Candy Bar y Combos:</h4>
+        <ul class="lista-detalle-items">
+          <li
+            *ngFor="let item of itemsCandySeleccionados(); trackBy: trackByItemCandy"
+            class="item-detalle-fila"
+          >
+            <div class="item-detalle-info">
+              <span><strong>{{ item.cantidad }}x</strong> {{ item.nombre }}</span>
+              <span *ngIf="item?.incluye_entrada" class="badge-combo-entrada">
+                Incluye {{ (item.cantidad || 1) * (item.cantidad_entradas || 1) }} entrada(s)
+              </span>
+            </div>
+
+            <div class="item-detalle-precio">
+              <strong>${{ item.precio * item.cantidad | number : '1.2-2' }}</strong>
+              <span *ngIf="item.precio_puntos > 0" class="texto-pts">
+                ({{ item.precio_puntos * item.cantidad }} pts)
+              </span>
+            </div>
+          </li>
+        </ul>
+
+        <!-- Explicación clara de cómo se aplicó el combo sobre los asientos -->
+        <div *ngIf="entradasCubiertasPorCombos > 0" class="caja-explicacion-combo">
+          <div>
+            🎟️ <strong>Cobertura de combos:</strong> Tus combos cubren
+            <strong>{{ entradasCubiertasPorCombos }}</strong> entrada(s) general(es)
+            (priorizando tus asientos generales y dejando <strong>{{ entradasFacturablesSueltas }}</strong> suelto(s)).
+          </div>
+          <div *ngIf="recargoVipEnCombosPesos > 0 || recargoVipEnCombosPuntos > 0" class="mt-1">
+            👑 <strong>Ajuste por asiento VIP en combo:</strong>
+            +${{ recargoVipEnCombosPesos | number : '1.2-2' }}
+            <span *ngIf="recargoVipEnCombosPuntos > 0">(+{{ recargoVipEnCombosPuntos }} pts)</span>
+            por diferencia entre entrada VIP y general.
+          </div>
+        </div>
+
+        <div class="subtotal-linea">
+          <span>Subtotal Candy Bar y Combos:</span>
+          <strong>
+            ${{ totalCandyPesos | number : '1.2-2' }}
+            <span *ngIf="totalCandyPuntos > 0">({{ totalCandyPuntos }} pts)</span>
+          </strong>
+        </div>
       </div>
 
       <!-- 🎟️ Sección de Cupones Aplicados en el Resumen -->
-      <div *ngIf="cuponesAplicados().length > 0" class="cupones-aplicados-resumen mt-3 p-2 bg-light border rounded">
+      <div
+        *ngIf="cuponesAplicados().length > 0"
+        class="cupones-aplicados-resumen mt-3 p-2 bg-light border rounded"
+      >
         <h6 class="fw-bold text-success mb-1">🎟️ Cupones Aplicados:</h6>
         <ul class="mb-0 ps-3 small">
           <li *ngFor="let cupon of cuponesAplicados()">
@@ -34,27 +113,34 @@
       </div>
 
       <hr />
-      <p class="precio-total"><strong>Total a pagar:</strong> ${{ totalPagar | number:'1.2-2' }} (o {{ totalPuntos }} Pts)</p>
+      <p class="precio-total">
+        <strong>Total a pagar:</strong> ${{ totalPagar | number : '1.2-2' }} (o {{ totalPuntos }} Pts)
+      </p>
     </div>
 
     <!-- 🎟️ Input para ingresar y aplicar nuevos cupones -->
     <div class="seccion-cupon card p-3 mb-4 shadow-sm bg-light">
-      <!-- 🌟 SECCIÓN DE CUPONES DISPONIBLES EN LA CUENTA DEL CLIENTE -->
       <div *ngIf="usuarioId() !== null && cuponesDisponiblesCliente().length > 0" class="mt-3">
-        <small class="text-muted d-block mb-2">🎁 Cupones disponibles en tu cuenta (haz clic para aplicar):</small>
+        <small class="text-muted d-block mb-2"
+          >🎁 Cupones disponibles en tu cuenta (haz clic para aplicar):</small
+        >
         <div class="d-flex flex-wrap gap-2">
-          <button 
-            type="button" 
+          <button
+            type="button"
             class="btn btn-sm btn-outline-secondary rounded-pill"
             *ngFor="let cupon of cuponesDisponiblesCliente()"
-            (click)="seleccionarCuponRapido(cupon.code)">
+            (click)="seleccionarCuponRapido(cupon.code)"
+          >
             <strong>{{ cupon.code }}</strong> ({{ cupon.discount_percentage }}% OFF)
           </button>
         </div>
       </div>
 
-      <!-- Feedback de errores o éxitos de cupones -->
-      <div *ngIf="mensajeCupon()" class="small mt-2" [ngClass]="esErrorCupon() ? 'text-danger fw-bold' : 'text-success fw-bold'">
+      <div
+        *ngIf="mensajeCupon()"
+        class="small mt-2"
+        [ngClass]="esErrorCupon() ? 'text-danger fw-bold' : 'text-success fw-bold'"
+      >
         {{ mensajeCupon() }}
       </div>
     </div>
@@ -62,17 +148,31 @@
     <!-- Opciones de pago para usuarios registrados -->
     <div *ngIf="usuarioId() !== null" class="metodos-pago">
       <label>Selecciona el método de pago:</label>
-      
+
       <div class="opcion-pago">
-        <input type="radio" id="efectivo" value="efectivo" [ngModel]="metodoPago()" (ngModelChange)="metodoPago.set($event)" name="metodoPago">
+        <input
+          type="radio"
+          id="efectivo"
+          value="efectivo"
+          [ngModel]="metodoPago()"
+          (ngModelChange)="metodoPago.set($event)"
+          name="metodoPago"
+        />
         <label for="efectivo">
           💵 Dinero en cuenta
-          <span class="text-muted small">(${{ dineroDisponibleCliente() | number:'1.2-2' }} disponibles)</span>
+          <span class="text-muted small">(${{ dineroDisponibleCliente() | number : '1.2-2' }} disponibles)</span>
         </label>
       </div>
 
       <div class="opcion-pago">
-        <input type="radio" id="puntos" value="puntos" [ngModel]="metodoPago()" (ngModelChange)="metodoPago.set($event)" name="metodoPago">
+        <input
+          type="radio"
+          id="puntos"
+          value="puntos"
+          [ngModel]="metodoPago()"
+          (ngModelChange)="metodoPago.set($event)"
+          name="metodoPago"
+        />
         <label for="puntos">
           ⭐ Puntos
           <span class="text-muted small">({{ puntosDisponiblesCliente() }} pts disponibles)</span>
@@ -80,11 +180,21 @@
       </div>
 
       <div class="opcion-pago">
-        <input type="radio" id="mixto" value="mixto" [ngModel]="metodoPago()" (ngModelChange)="metodoPago.set($event)" name="metodoPago">
+        <input
+          type="radio"
+          id="mixto"
+          value="mixto"
+          [ngModel]="metodoPago()"
+          (ngModelChange)="metodoPago.set($event)"
+          name="metodoPago"
+        />
         <label for="mixto">
           💳 Mixto (Dinero + Créditos)
           <span class="text-muted small">
-            (${{ creditosDisponiblesCliente() | number:'1.2-2' }} créditos / ${{ dineroDisponibleCliente() | number:'1.2-2' }} dinero disponibles)
+            (${{ creditosDisponiblesCliente() | number : '1.2-2' }} créditos / ${{
+              dineroDisponibleCliente() | number : '1.2-2'
+            }}
+            dinero disponibles)
           </span>
         </label>
       </div>
@@ -92,16 +202,20 @@
 
     <!-- Simulación de pago para usuarios anónimos (Invitados) -->
     <div *ngIf="usuarioId() === null" class="simulacion-pago-anonimo">
-      <label for="montoIngresado">Simular ingreso de efectivo / tarjeta (Total: ${{ totalPagar | number:'1.2-2' }}):</label>
-      <input 
-        type="number" 
-        id="montoIngresado" 
-        [ngModel]="montoIngresadoAnonimo()" 
+      <label for="montoIngresado"
+        >Simular ingreso de efectivo / tarjeta (Total: ${{ totalPagar | number : '1.2-2' }}):</label
+      >
+      <input
+        type="number"
+        id="montoIngresado"
+        [ngModel]="montoIngresadoAnonimo()"
         (ngModelChange)="montoIngresadoAnonimo.set($event)"
         placeholder="Ingrese el monto exacto"
         class="input-monto"
       />
-      <small class="help-text">Debes ingresar el monto exacto para completar la compra simulada.</small>
+      <small class="help-text"
+        >Debes ingresar el monto exacto para completar la compra simulada.</small
+      >
     </div>
 
     <div class="acciones">
@@ -115,13 +229,10 @@
 <div class="modal-backdrop-custom" *ngIf="mostrarModalEdadInsuficiente()">
   <div class="modal-dialog-centered-custom">
     <div class="modal-content-custom">
-      
-      <!-- Cabecera con tono de advertencia/error -->
       <div class="modal-header-custom bg-danger text-white">
         <h5 class="m-0">Acceso Denegado 🚫</h5>
       </div>
 
-      <!-- Cuerpo del modal -->
       <div class="modal-body-custom text-center">
         <div style="font-size: 3.5rem;" class="mb-2">⚠️</div>
         <p class="mb-3 text-secondary" style="font-size: 1.1rem; font-weight: 500;">
@@ -132,16 +243,15 @@
         </p>
       </div>
 
-      <!-- Pie del modal con botón de acción -->
       <div class="modal-footer-custom justify-content-center">
-        <button 
-          type="button" 
-          class="btn btn-danger px-5 rounded-pill fw-bold shadow-sm" 
-          (click)="cerrarModalEdadYRedirigir()">
+        <button
+          type="button"
+          class="btn btn-danger px-5 rounded-pill fw-bold shadow-sm"
+          (click)="cerrarModalEdadYRedirigir()"
+        >
           Volver al Inicio
         </button>
       </div>
-
     </div>
   </div>
 </div>
@@ -156,20 +266,26 @@
       <div class="modal-body-custom">
         <div style="font-size: 3rem;" class="mb-3">💳</div>
         <p class="mb-1 text-secondary">Tu saldo actual es de:</p>
-        <h4 class="text-danger fw-bold mb-2">${{ saldoActualCliente() | number:'1.2-2' }}</h4>
-        <p class="small text-muted mb-4">El total de tu compra es de <strong>${{ totalPagar | number:'1.2-2' }}</strong>.</p>
-        
+        <h4 class="text-danger fw-bold mb-2">${{ saldoActualCliente() | number : '1.2-2' }}</h4>
+        <p class="small text-muted mb-4">
+          El total de tu compra es de <strong>${{ totalPagar | number : '1.2-2' }}</strong>.
+        </p>
+
         <div class="bg-light border border-light-subtle rounded-3 p-3 text-start mb-3 shadow-sm">
-          <label for="montoCarga" class="form-label small fw-bold text-dark">Monto a cargar en tu cuenta ($):</label>
-          <input 
-            type="number" 
-            id="montoCarga" 
-            class="form-control form-control-sm" 
-            [ngModel]="montoACargarInput()" 
+          <label for="montoCarga" class="form-label small fw-bold text-dark"
+            >Monto a cargar en tu cuenta ($):</label
+          >
+          <input
+            type="number"
+            id="montoCarga"
+            class="form-control form-control-sm"
+            [ngModel]="montoACargarInput()"
             (ngModelChange)="montoACargarInput.set($event)"
             min="0"
           />
-          <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">Sugerimos cargar al menos el monto faltante.</small>
+          <small class="text-muted d-block mt-1" style="font-size: 0.75rem;"
+            >Sugerimos cargar al menos el monto faltante.</small
+          >
         </div>
 
         <div *ngIf="mensajeErrorCarga()" class="text-danger small fw-bold mt-2">
@@ -177,14 +293,26 @@
         </div>
       </div>
       <div class="modal-footer-custom">
-        <button type="button" class="btn btn-light border px-4 rounded-pill" (click)="cerrarModalSaldo()">Cancelar</button>
-        <button type="button" class="btn btn-warning px-4 rounded-pill fw-bold text-dark" (click)="cargarSaldoYContinuar()">Cargar y Pagar 🚀</button>
+        <button
+          type="button"
+          class="btn btn-light border px-4 rounded-pill"
+          (click)="cerrarModalSaldo()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn-warning px-4 rounded-pill fw-bold text-dark"
+          (click)="cargarSaldoYContinuar()"
+        >
+          Cargar y Pagar 🚀
+        </button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- 🎉 MODAL DE ÉXITO DE PAGO (Único y con diseño unificado) -->
+<!-- 🎉 MODAL DE ÉXITO DE PAGO -->
 <div class="modal-backdrop-custom" *ngIf="mostrarModalExito()">
   <div class="modal-dialog-centered-custom">
     <div class="modal-content-custom">
@@ -193,16 +321,23 @@
       </div>
       <div class="modal-body-custom">
         <div style="font-size: 3.5rem;" class="mb-2">🎟️</div>
-        <p class="mb-2 text-secondary">Tu entrada y comprobante en PDF se han descargado correctamente.</p>
+        <p class="mb-2 text-secondary">
+          Tu entrada y comprobante en PDF se han descargado correctamente.
+        </p>
         <p class="text-muted small mb-1">Tu código de retiro único es:</p>
         <div class="bg-light p-3 rounded-3 border">
           <h2 class="text-success fw-bold m-0 tracking-wider">{{ codigoRetiroExitoso() }}</h2>
         </div>
       </div>
       <div class="modal-footer-custom">
-        <button type="button" class="btn btn-success px-5 rounded-pill fw-bold shadow-sm" (click)="finalizarYRedirigir()">Ir al Inicio</button>
+        <button
+          type="button"
+          class="btn btn-success px-5 rounded-pill fw-bold shadow-sm"
+          (click)="finalizarYRedirigir()"
+        >
+          Ir al Inicio
+        </button>
       </div>
     </div>
   </div>
 </div>
-

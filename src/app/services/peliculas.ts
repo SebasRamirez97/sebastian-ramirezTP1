@@ -96,17 +96,34 @@ export class PeliculasService {
 
   // 🔹 Obtener las N películas con mayor puntaje (para el Home)
   async getTopPeliculas(limite: number = 3): Promise<Pelicula[]> {
-  const { data, error } = await supabase
-    .from('peliculas')
-    .select('*')
-    .order('cantidad_veces_vendida', { ascending: false }) // 👈 Cambiado: ordena de mayor a menor ventas
-    .limit(limite); // Trae las primeras 3 (o el límite especificado)
+    const { data, error } = await supabase
+      .from('peliculas')
+      .select('*')
+      .order('cantidad_veces_vendida', { ascending: false }) // 👈 Cambiado: ordena de mayor a menor ventas
+      .limit(limite); // Trae las primeras 3 (o el límite especificado)
 
-  if (error) {
-    console.error('Error al obtener películas más vendidas:', error.message);
-    throw error;
+    if (error) {
+      console.error('Error al obtener películas más vendidas:', error.message);
+      throw error;
+    }
+
+    return (data as Pelicula[]) || [];
   }
 
-  return (data as Pelicula[]) || [];
-}
+  // 🔹 Obtener películas próximas a estrenarse (fecha_estreno futura)
+  async getPeliculasProximamente(): Promise<Pelicula[]> {
+    const ahoraIso = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('peliculas')
+      .select('*')
+      .gt('fecha_estreno', ahoraIso)
+      .order('fecha_estreno', { ascending: true });
+
+    if (error) {
+      console.error('Error al obtener películas próximamente:', error.message);
+      throw error;
+    }
+
+    return (data as Pelicula[]) || [];
+  }
 }

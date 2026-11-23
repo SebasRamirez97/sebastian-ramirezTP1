@@ -115,6 +115,38 @@ export class EntradasService {
     }
   }
 
+  private readonly FILAS_VIP = new Set(['R', 'S', 'T']);
+
+  esFilaVip(fila: string): boolean {
+    return this.FILAS_VIP.has((fila || '').trim().toUpperCase());
+  }
+
+  calcularPrecioGeneralPesos(funcion: any): number {
+    return Number(funcion?.precio_pesos) || 0;
+  }
+
+  calcularPrecioVipPesos(funcion: any): number {
+    return this.calcularPrecioGeneralPesos(funcion) * 2;
+  }
+
+  calcularPrecioGeneralPuntos(funcion: any): number {
+    return Number(funcion?.precio_puntos) || 0;
+  }
+
+  calcularPrecioVipPuntos(funcion: any): number {
+    return this.calcularPrecioGeneralPuntos(funcion) * 2;
+  }
+
+  obtenerPrecioAsiento(funcion: any, fila: string, metodoPago: string = 'efectivo'): number {
+    const esVip = this.esFilaVip(fila);
+    if (metodoPago === 'puntos') {
+      return esVip
+        ? this.calcularPrecioVipPuntos(funcion)
+        : this.calcularPrecioGeneralPuntos(funcion);
+    }
+    return esVip ? this.calcularPrecioVipPesos(funcion) : this.calcularPrecioGeneralPesos(funcion);
+  }
+
   /**
    * Confirma la compra: Calcula el total y genera la orden unificada.
    */
@@ -134,19 +166,16 @@ export class EntradasService {
       .select('precio_pesos, precio_puntos')
       .eq('id', funcionId)
       .single();
-    
+
     if (errorFuncion || !funcionData) {
       throw new Error('No se pudo obtener la información de precios de la función.');
     }
 
+    // 👇 Cambio clave: sumamos el precio de cada asiento según su fila (General o VIP)
     let totalCalculado = 0;
 
-    if (metodoPago === 'puntos') {
-      const precioPuntosUnitario = funcionData.precio_puntos || 0;
-      totalCalculado = asientosSeleccionados.length * precioPuntosUnitario;
-    } else {
-      const precioPesosUnitario = funcionData.precio_pesos || 0;
-      totalCalculado = asientosSeleccionados.length * precioPesosUnitario;
+    for (const asiento of asientosSeleccionados) {
+      totalCalculado += this.obtenerPrecioAsiento(funcionData, asiento.fila, metodoPago);
     }
 
     const codigoUnico = this.generarCodigoRetiro();

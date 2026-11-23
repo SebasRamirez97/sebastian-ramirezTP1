@@ -149,6 +149,18 @@ export const routes: Routes = [
     canActivate: [clienteGuard] 
   },
 
+  {
+    path: 'mis-peliculas',
+    loadComponent: () => import('./components/mis-peliculas/mis-peliculas').then(m => m.MisPeliculasComponent), 
+    canActivate: [clienteGuard] 
+  },
+
+  {
+    path: 'proximamente',
+    loadComponent: () => import('./components/proximamente/proximamente').then(m => m.ProximamenteComponent), 
+    canActivate: [authGuard] 
+  },
+
   // 🔄 Redirecciones
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: '**', redirectTo: '/login' }

@@ -14,16 +14,30 @@
     </div>
   </div>
 
-  <!-- Género -->
+  <!-- Géneros (agregar de a uno a la lista) -->
   <div>
-    <input formControlName="genero" placeholder="Género (ej: Acción, Drama, Comedia)">
-    <div *ngIf="submitted() && formPelicula.get('genero')?.invalid" class="error">
-      <div *ngIf="formPelicula.get('genero')?.hasError('required')">
-        Campo obligatorio incompleto
-      </div>
-      <div *ngIf="formPelicula.get('genero')?.hasError('minlength')">
-        Debe tener al menos 2 caracteres
-      </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <input
+        type="text"
+        [formControl]="nuevoGeneroControl"
+        placeholder="Agregar género (ej: Acción)"
+        (keydown.enter)="agregarGenero($event)"
+      >
+      <button type="button" (click)="agregarGenero()">Agregar</button>
+    </div>
+
+    <div *ngIf="errorGenero()" class="error">
+      {{ errorGenero() }}
+    </div>
+
+    <div *ngIf="generos().length > 0" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+      <span
+        *ngFor="let g of generos(); let i = index"
+        style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 16px; background: #eee;"
+      >
+        {{ g }}
+        <button type="button" (click)="eliminarGenero(i)" title="Quitar género">×</button>
+      </span>
     </div>
   </div>
 
@@ -39,15 +53,49 @@
 
   <!-- Fecha de estreno -->
   <div>
-    <input 
-      formControlName="fecha_estreno" 
-      type="text" 
-      placeholder="Fecha de estreno" 
-      onfocus="(this.type='date')" 
-      onblur="(this.value ? this.type='date' : this.type='text')">
-      
+    <input
+      formControlName="fecha_estreno"
+      type="text"
+      placeholder="Fecha de estreno"
+      onfocus="(this.type='date')"
+      onblur="(this.value ? this.type='date' : this.type='text')"
+    >
     <div *ngIf="submitted() && formPelicula.get('fecha_estreno')?.invalid" class="error">
       Campo obligatorio incompleto
+    </div>
+  </div>
+
+  <!-- 🎟️ Configuración de Preventa -->
+  <div class="preventa-box" style="margin: 12px 0; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+    <label style="display: flex; align-items: center; gap: 8px; font-weight: bold;">
+      <input type="checkbox" formControlName="preventa_activa">
+      Habilitar preventa anticipada
+    </label>
+
+    <div *ngIf="formPelicula.get('preventa_activa')?.value" style="margin-top: 10px;">
+      <div style="margin-bottom: 8px;">
+        <label style="display: block; font-size: 0.9rem;">Días previos al estreno (por defecto 7):</label>
+        <input type="number" formControlName="dias_preventa" min="1" max="60" placeholder="7">
+        <div *ngIf="submitted() && formPelicula.get('dias_preventa')?.invalid" class="error">
+          Ingresa una cantidad de días válida (mínimo 1).
+        </div>
+      </div>
+
+      <div style="margin-bottom: 8px;">
+        <label style="display: block; font-size: 0.9rem;">Precio especial preventa ($):</label>
+        <input type="number" formControlName="precio_preventa_pesos" min="0" step="0.01" placeholder="Ej: 3500">
+        <div *ngIf="submitted() && formPelicula.get('precio_preventa_pesos')?.invalid" class="error">
+          El precio de preventa no puede ser negativo.
+        </div>
+      </div>
+
+      <div>
+        <label style="display: block; font-size: 0.9rem;">Precio especial preventa (Puntos):</label>
+        <input type="number" formControlName="precio_preventa_puntos" min="0" placeholder="Ej: 150">
+        <div *ngIf="submitted() && formPelicula.get('precio_preventa_puntos')?.invalid" class="error">
+          Los puntos de preventa no pueden ser negativos.
+        </div>
+      </div>
     </div>
   </div>
 

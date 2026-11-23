@@ -28,16 +28,116 @@
   margin-bottom: 25px;
 }
 
-.resumen-candy ul {
-  list-style-type: none;
-  padding-left: 0;
-  margin-top: 8px;
+.resumen-asientos h4,
+.resumen-candy h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 10px;
 }
 
-.resumen-candy li {
-  padding: 4px 0;
-  color: #555;
+.lista-detalle-items {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px 0;
+}
+
+.item-detalle-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   font-size: 0.95rem;
+}
+
+.item-detalle-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.item-detalle-precio {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.badge-butaca {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.badge-tipo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.badge-general {
+  background-color: #e2e8f0;
+  color: #334155;
+}
+
+.badge-vip {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+
+.badge-combo-entrada {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.texto-incluido-combo {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #15803d;
+}
+
+.texto-recargo-vip {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #b45309;
+}
+
+.texto-pts {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin-left: 4px;
+}
+
+.subtotal-linea {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 4px;
+  font-size: 0.92rem;
+  color: #475569;
+  border-top: 1px dashed #cbd5e1;
+  margin-top: 6px;
+}
+
+.caja-explicacion-combo {
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #78350f;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.84rem;
+  margin: 8px 0;
 }
 
 .precio-total {
@@ -54,7 +154,6 @@
   border-radius: 12px !important;
 }
 
-/* Botones de cupones disponibles */
 .seccion-cupon .btn-outline-secondary {
   border-color: #94a3b8;
   color: #475569;
@@ -193,15 +292,14 @@
    🎬 ESTILOS MODERNOS PARA EL MODAL
    ========================================= */
 
-/* Fondo oscuro translúcido con efecto blur profesional */
 .modal-backdrop-custom {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(15, 23, 42, 0.75); /* Tono oscuro profundo y elegante */
-  backdrop-filter: blur(6px); /* Efecto desenfocado en el fondo */
+  background-color: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(6px);
   z-index: 1050;
   display: flex;
   justify-content: center;
@@ -209,7 +307,6 @@
   animation: fadeIn 0.25s ease-out;
 }
 
-/* Contenedor flotante centrado */
 .modal-dialog-centered-custom {
   width: 100%;
   max-width: 440px;
@@ -218,7 +315,6 @@
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Tarjeta del modal con diseño limpio y moderno */
 .modal-content-custom {
   background: #ffffff;
   border-radius: 20px;
@@ -227,9 +323,8 @@
   overflow: hidden;
 }
 
-/* Cabecera con gradiente cálido/atractivo */
 .modal-header-custom {
-  background: linear-gradient(135deg, #f59e0b, #d97706); /* Tono ámbar/naranja elegante */
+  background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #ffffff;
   padding: 22px 24px;
   border-bottom: none;
@@ -239,7 +334,7 @@
 }
 
 .modal-header-custom.success {
-  background: linear-gradient(135deg, #10b981, #059669); /* Esmeralda para éxito */
+  background: linear-gradient(135deg, #10b981, #059669);
 }
 
 .modal-header-custom h5 {
@@ -249,14 +344,12 @@
   letter-spacing: -0.01em;
 }
 
-/* Cuerpo del modal */
 .modal-body-custom {
   padding: 28px 24px 20px 24px;
   color: #334155;
   text-align: center;
 }
 
-/* Footer del modal */
 .modal-footer-custom {
   padding: 16px 24px 24px 24px;
   background-color: #f8fafc;
@@ -266,7 +359,6 @@
   border-top: 1px solid #f1f5f9;
 }
 
-/* Animaciones fluidas */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

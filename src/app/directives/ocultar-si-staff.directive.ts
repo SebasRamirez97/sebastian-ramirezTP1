@@ -4,10 +4,12 @@ import {
   ViewContainerRef,
   inject,
   effect,
-  Input,
+  input,
   OnInit,
 } from '@angular/core';
 import { RolStaffService } from '../services/rol-staff.service';
+
+type RolStaff = 'admin' | 'empleado';
 
 @Directive({
   selector: '[appOcultarSiStaff]',
@@ -18,34 +20,38 @@ export class OcultarSiStaffDirective implements OnInit {
   private viewContainer = inject(ViewContainerRef);
   private rolStaffService = inject(RolStaffService);
 
-  // Opcional: si pasás ['admin'], solo oculta para admin; por defecto oculta para 'admin' y 'empleado'
-  @Input('appOcultarSiStaff') rolesAOcultar: Array<'admin' | 'empleado'> = ['admin', 'empleado'];
-
-  private vistaCreada = false;
+  // Input reactivo con signal
+  rolesAOcultar = input<RolStaff[]>(['admin', 'empleado'], {
+    alias: 'appOcultarSiStaff',
+  });
 
   constructor() {
-    // Reacciona automáticamente cuando cambia la signal tipoUsuario
     effect(() => {
-      const rolActual = this.rolStaffService.tipoUsuario();
-      const rolesObjetivo =
-        Array.isArray(this.rolesAOcultar) && this.rolesAOcultar.length > 0
-          ? this.rolesAOcultar
-          : (['admin', 'empleado'] as const);
+      const rolRaw = this.rolStaffService.tipoUsuario();
+      const rolNormalizado = typeof rolRaw === 'string' ? rolRaw.toLowerCase().trim() : null;
 
-      const debeOcultar = rolActual !== null && rolesObjetivo.includes(rolActual as any);
+      const inputRoles = this.rolesAOcultar();
+      const rolesObjetivo: string[] =
+        Array.isArray(inputRoles) && inputRoles.length > 0
+          ? inputRoles.map((r) => r.toLowerCase().trim())
+          : ['admin', 'empleado'];
+
+      const debeOcultar =
+        rolNormalizado !== null && rolesObjetivo.includes(rolNormalizado);
 
       if (debeOcultar) {
-        this.viewContainer.clear();
-        this.vistaCreada = false;
-      } else if (!this.vistaCreada) {
-        this.viewContainer.createEmbeddedView(this.templateRef);
-        this.vistaCreada = true;
+        if (this.viewContainer.length > 0) {
+          this.viewContainer.clear();
+        }
+      } else {
+        if (this.viewContainer.length === 0) {
+          this.viewContainer.createEmbeddedView(this.templateRef);
+        }
       }
     });
   }
 
   async ngOnInit() {
-    // Si aún no se consultó el rol en esta sesión, lo consultamos
     if (this.rolStaffService.tipoUsuario() === null) {
       await this.rolStaffService.verificarRolActual();
     }

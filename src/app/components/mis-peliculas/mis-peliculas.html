@@ -1,0 +1,99 @@
+<div class="cartelera-container">
+  <h2>🎞️ Mis películas</h2>
+
+  <!-- 🌟 BUSCADOR Y PULSADORES DE GÉNERO -->
+  <div class="buscador-seccion">
+    <div class="input-grupo">
+      <span class="icono-busqueda">🔍</span>
+      <input
+        type="text"
+        [ngModel]="filtroTexto()"
+        (ngModelChange)="filtroTexto.set($event)"
+        placeholder="Buscar en tus películas vistas..."
+        class="input-buscador"
+      />
+    </div>
+
+    <div class="pulsadores-generos">
+      <button
+        type="button"
+        *ngFor="let gen of generosDisponibles()"
+        (click)="seleccionarGenero(gen)"
+        [class.activo]="generoSeleccionado() === gen"
+        class="btn-genero-chip"
+      >
+        {{ gen }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Estado de carga -->
+  <div *ngIf="cargando(); else contenidoCargado" class="loading-container">
+    <p class="loading">Cargando tu historial...</p>
+  </div>
+
+  <ng-template #contenidoCargado>
+    <div *ngIf="historial().length === 0" class="sin-peliculas">
+      <p>
+        Aún no tienes películas en tu historial. Se agregan automáticamente cuando retiras/verificas
+        al menos una entrada de la película.
+      </p>
+    </div>
+
+    <div class="grid-cartelera" *ngIf="historial().length > 0">
+      <div
+        *ngFor="let item of peliculasFiltradas(); trackBy: trackByPelicula"
+        class="card-pelicula"
+      >
+        <div class="poster-wrapper">
+          <img
+            [src]="item.poster_url || 'assets/placeholder-poster.jpg'"
+            [alt]="item.nombre"
+            class="poster-img"
+          />
+
+          <div
+            class="badge-edad"
+            [ngClass]="{
+              atp: item.limite_edad === 'ATP',
+              mayores: item.limite_edad !== 'ATP',
+            }"
+          >
+            {{ item.limite_edad || 'ATP' }}
+          </div>
+        </div>
+
+        <div class="card-info">
+          <h3 class="titulo">{{ item.nombre }}</h3>
+          <p class="detalle genero-tag">🎭 {{ formatearGeneros(item.genero) }}</p>
+          <p class="detalle" *ngIf="item.duracion">
+            ⏱️ <strong>Duración:</strong> {{ item.duracion }} min
+          </p>
+          <p class="detalle">
+            📅 <strong>Vista el:</strong> {{ item.fecha_vista | date : 'dd/MM/yyyy' }}
+          </p>
+
+          <div class="calificacion-box">
+            <span class="calificacion-label">Tu calificación:</span>
+            <div class="estrellas-grupo">
+              <button
+                type="button"
+                *ngFor="let estrella of [1, 2, 3, 4, 5]"
+                class="btn-estrella"
+                [class.activa]="(item.calificacion || 0) >= estrella"
+                (click)="calificar(item, estrella)"
+                [title]="'Calificar con ' + estrella + ' estrella(s)'"
+              >
+                ★
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="peliculasFiltradas().length === 0" class="sin-peliculas">
+        <p>No se encontraron películas en tu historial que coincidan con tu búsqueda.</p>
+      </div>
+    </div>
+  </ng-template>
+</div>

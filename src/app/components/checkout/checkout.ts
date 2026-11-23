@@ -100,6 +100,31 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     }
   }
 
+  private normalizarItemCarrito(item: any): any {
+    const esCombo = Boolean(
+      item?.esCombo ||
+        item?.es_combo ||
+        item?.tipo === 'combo' ||
+        (Array.isArray(item?.items) && item.items.length > 0),
+    );
+    const cantEntradas = Number(
+      item?.cantidad_entradas ?? item?.cantidadEntradas ?? (item?.incluye_entrada || item?.incluyeEntrada ? 1 : 0),
+    );
+    const incluyeEntrada = Boolean(
+      item?.incluye_entrada || item?.incluyeEntrada || cantEntradas > 0,
+    );
+
+    return {
+      ...item,
+      esCombo,
+      incluye_entrada: incluyeEntrada,
+      cantidad_entradas: incluyeEntrada ? Math.max(1, cantEntradas) : 0,
+      precio: Number(item?.precio ?? item?.precio_dinero ?? 0),
+      precio_puntos: Number(item?.precio_puntos ?? item?.precioPuntos ?? 0),
+      cantidad: Number(item?.cantidad ?? item?.cantidadDeseada ?? 1),
+    };
+  }
+
   async ngOnInit(): Promise<void> {
     const idParam = this.route.snapshot.paramMap.get('funcionId') || '';
     this.funcionId.set(idParam);
@@ -109,11 +134,7 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     if (storedCandy) {
       try {
         const parsed = JSON.parse(storedCandy);
-        candyTemp = parsed.map((item: any) => ({
-          ...item,
-          precio: Number(item.precio || item.precio_dinero || 0),
-          cantidad: Number(item.cantidad || item.cantidadDeseada || 1),
-        }));
+        candyTemp = parsed.map((item: any) => this.normalizarItemCarrito(item));
       } catch (e) {
         candyTemp = [];
       }
@@ -121,11 +142,7 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
 
     if (candyTemp.length === 0) {
       const serviceItems = this.productosService.obtenerCarritoTemp();
-      candyTemp = serviceItems.map((item: any) => ({
-        ...item,
-        precio: Number(item.precio || item.precio_dinero || 0),
-        cantidad: Number(item.cantidad || item.cantidadDeseada || 1),
-      }));
+      candyTemp = serviceItems.map((item: any) => this.normalizarItemCarrito(item));
     }
     this.itemsCandySeleccionados.set(candyTemp);
 
@@ -170,7 +187,7 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
 
   private esMetodoCredito(metodo: string): boolean {
     const m = (metodo || '').toLowerCase();
-    return m === 'credito' || m === 'creditos' || m ==='mixto';
+    return m === 'credito' || m === 'creditos' || m === 'mixto';
   }
 
   private obtenerPorcentajeCupon(cupon: any): number {
@@ -325,14 +342,66 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     }
   }
 
+  // 🎟️ Helpers para diferenciar asientos VIP (R, S, T) y generales
+  esAsientoVip(fila: string): boolean {
+    return this.entradasService.esFilaVip(fila);
+  }
+
+  obtenerPrecioAsientoPesos(fila: string): number {
+    return this.entradasService.obtenerPrecioAsiento(this.funcionData(), fila, 'efectivo');
+  }
+
+  obtenerPrecioAsientoPuntos(fila: string): number {
+    return this.entradasService.obtenerPrecioAsiento(this.funcionData(), fila, 'puntos');
+  }
+
+  /**
+   * Ordena los asientos dejando primero los Generales y al final los VIP.
+   * Así, si el usuario tiene 1 General + 1 VIP + 1 Combo con entrada,
+   * el combo cubre la entrada general ($15.000) y la VIP se cobra aparte ($10.000).
+   */
+  get asientosOrdenadosParaFacturacion(): any[] {
+    const asientos = [...(this.misAsientos() || [])];
+    return asientos.sort((a, b) => {
+      const vipA = this.esAsientoVip(a?.fila) ? 1 : 0;
+      const vipB = this.esAsientoVip(b?.fila) ? 1 : 0;
+      if (vipA !== vipB) return vipA - vipB;
+      const filaCmp = String(a?.fila || '').localeCompare(String(b?.fila || ''));
+      if (filaCmp !== 0) return filaCmp;
+      return Number(a?.numero_asiento || 0) - Number(b?.numero_asiento || 0);
+    });
+  }
+
+  esAsientoCubiertoPorCombo(asiento: any): boolean {
+    const cuposCombo = this.entradasCubiertasPorCombos;
+    if (cuposCombo <= 0) return false;
+    const ordenados = this.asientosOrdenadosParaFacturacion;
+    const indice = ordenados.findIndex(
+      (a) =>
+        (a?.id && asiento?.id && a.id === asiento.id) ||
+        (a?.fila === asiento?.fila && a?.numero_asiento === asiento?.numero_asiento),
+    );
+    return indice !== -1 && indice < cuposCombo;
+  }
+
+  get cantidadAsientosVip(): number {
+    return (this.misAsientos() || []).filter((a) => this.esAsientoVip(a?.fila)).length;
+  }
+
+  get cantidadAsientosGenerales(): number {
+    return (this.misAsientos() || []).filter((a) => !this.esAsientoVip(a?.fila)).length;
+  }
+
   get entradasCubiertasPorCombos(): number {
     const items = this.itemsCandySeleccionados();
     if (!items || items.length === 0) return 0;
 
     return items.reduce((acc, item) => {
-      if (!item?.esCombo || !item?.incluye_entrada) return acc;
+      const cantEntradasPorCombo = Number(
+        item?.cantidad_entradas ?? item?.cantidadEntradas ?? (item?.incluye_entrada || item?.incluyeEntrada ? 1 : 0),
+      );
+      if (cantEntradasPorCombo <= 0) return acc;
       const cantCombos = Number(item.cantidad || item.cantidadDeseada || 0);
-      const cantEntradasPorCombo = Number(item.cantidad_entradas || 1);
       return acc + cantCombos * cantEntradasPorCombo;
     }, 0);
   }
@@ -342,34 +411,91 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     return Math.max(0, totalAsientos - this.entradasCubiertasPorCombos);
   }
 
+  // Diferencia unitaria entre entrada VIP y General (+100% de la general)
+  get diferenciaVipPesos(): number {
+    const func = this.funcionData();
+    return Math.max(
+      0,
+      this.entradasService.calcularPrecioVipPesos(func) -
+        this.entradasService.calcularPrecioGeneralPesos(func),
+    );
+  }
+
+  get diferenciaVipPuntos(): number {
+    const func = this.funcionData();
+    return Math.max(
+      0,
+      this.entradasService.calcularPrecioVipPuntos(func) -
+        this.entradasService.calcularPrecioGeneralPuntos(func),
+    );
+  }
+
+  // Cantidad de asientos VIP que quedaron cubiertos por combos con entrada
+  get cantidadAsientosVipCubiertosPorCombo(): number {
+    const ordenados = this.asientosOrdenadosParaFacturacion;
+    const cubiertos = ordenados.slice(0, Math.min(this.entradasCubiertasPorCombos, ordenados.length));
+    return cubiertos.filter((a) => this.esAsientoVip(a?.fila)).length;
+  }
+
+  // Recargo VIP total sumado a los combos cuando absorben asientos VIP
+  get recargoVipEnCombosPesos(): number {
+    return Number((this.cantidadAsientosVipCubiertosPorCombo * this.diferenciaVipPesos).toFixed(2));
+  }
+
+  get recargoVipEnCombosPuntos(): number {
+    return this.cantidadAsientosVipCubiertosPorCombo * this.diferenciaVipPuntos;
+  }
+
+  // Total de asientos sueltos (los que NO cubrió ningún combo)
   get totalEntradasPesos(): number {
-    const precio = Number(this.funcionData()?.precio_pesos || 0);
-    return this.entradasFacturablesSueltas * precio;
+    const ordenados = this.asientosOrdenadosParaFacturacion;
+    const cubiertas = Math.min(this.entradasCubiertasPorCombos, ordenados.length);
+    const asientosSueltos = ordenados.slice(cubiertas);
+
+    const total = asientosSueltos.reduce(
+      (acc, asiento) => acc + this.obtenerPrecioAsientoPesos(asiento?.fila),
+      0,
+    );
+    return Number(total.toFixed(2));
   }
 
   get totalEntradasPuntos(): number {
-    const precioPts = Number(this.funcionData()?.precio_puntos || 0);
-    return this.entradasFacturablesSueltas * precioPts;
+    const ordenados = this.asientosOrdenadosParaFacturacion;
+    const cubiertas = Math.min(this.entradasCubiertasPorCombos, ordenados.length);
+    const asientosSueltos = ordenados.slice(cubiertas);
+
+    return asientosSueltos.reduce(
+      (acc, asiento) => acc + this.obtenerPrecioAsientoPuntos(asiento?.fila),
+      0,
+    );
   }
 
   get totalCandyPesos(): number {
     const items = this.itemsCandySeleccionados();
-    if (!items || items.length === 0) return 0;
-    return items.reduce((acc, item) => {
-      const precio = Number(item.precio || item.precio_dinero || 0);
-      const cantidad = Number(item.cantidad || item.cantidadDeseada || 0);
-      return acc + precio * cantidad;
-    }, 0);
+    const baseCandy =
+      !items || items.length === 0
+        ? 0
+        : items.reduce((acc, item) => {
+            const precio = Number(item.precio || item.precio_dinero || 0);
+            const cantidad = Number(item.cantidad || item.cantidadDeseada || 0);
+            return acc + precio * cantidad;
+          }, 0);
+
+    return Number((baseCandy + this.recargoVipEnCombosPesos).toFixed(2));
   }
 
   get totalCandyPuntos(): number {
     const items = this.itemsCandySeleccionados();
-    if (!items || items.length === 0) return 0;
-    return items.reduce((acc, item) => {
-      const puntos = Number(item.precio_puntos || 0);
-      const cantidad = Number(item.cantidad || item.cantidadDeseada || 0);
-      return acc + puntos * cantidad;
-    }, 0);
+    const basePuntos =
+      !items || items.length === 0
+        ? 0
+        : items.reduce((acc, item) => {
+            const puntos = Number(item.precio_puntos || 0);
+            const cantidad = Number(item.cantidad || item.cantidadDeseada || 0);
+            return acc + puntos * cantidad;
+          }, 0);
+
+    return basePuntos + this.recargoVipEnCombosPuntos;
   }
 
   // 🔹 Método mixto: toma primero los créditos disponibles y luego completa con dinero disponible
@@ -390,7 +516,9 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
 
     const topePorCompraYSaldo = Math.min(total, credDisp);
     const deseado =
-      creditosDeseados !== undefined && creditosDeseados !== null && !Number.isNaN(Number(creditosDeseados))
+      creditosDeseados !== undefined &&
+      creditosDeseados !== null &&
+      !Number.isNaN(Number(creditosDeseados))
         ? Math.max(0, Number(creditosDeseados))
         : topePorCompraYSaldo;
 
@@ -757,6 +885,8 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
       itemsCandy: this.itemsCandySeleccionados(),
       total: totalGeneral,
       metodoPago: metodo,
+      funcionData: this.funcionData(),
+      cupones: this.cuponesAplicados(),
     });
 
     localStorage.removeItem('carritoCandyTemp');

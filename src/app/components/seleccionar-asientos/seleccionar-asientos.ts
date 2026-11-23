@@ -1,4 +1,12 @@
-import { Component, OnInit, OnDestroy, signal, inject,HostListener } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  signal,
+  computed,
+  inject,
+  HostListener,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EntradasService } from '../../services/entradas.services';
@@ -13,7 +21,9 @@ import { ComponenteConAsientosPendientes } from '../../guards/liberar-asientos.g
   templateUrl: './seleccionar-asientos.html',
   styleUrls: ['./seleccionar-asientos.css'],
 })
-export class SeleccionarAsientosComponent implements OnInit, OnDestroy, ComponenteConAsientosPendientes {
+export class SeleccionarAsientosComponent
+  implements OnInit, OnDestroy, ComponenteConAsientosPendientes
+{
   // 🔹 Inyección moderna con inject()
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -45,7 +55,45 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy, Componen
   cantidadPermitida = signal<number>(1);
 
   private realtimeChannel: any;
-  
+
+  // 💰 Precios unitarios calculados (General vs VIP +100%)
+  precioGeneralPesos = computed(() =>
+    this.entradasService.calcularPrecioGeneralPesos(this.funcion())
+  );
+
+  precioVipPesos = computed(() =>
+    this.entradasService.calcularPrecioVipPesos(this.funcion())
+  );
+
+  precioGeneralPuntos = computed(() =>
+    this.entradasService.calcularPrecioGeneralPuntos(this.funcion())
+  );
+
+  precioVipPuntos = computed(() =>
+    this.entradasService.calcularPrecioVipPuntos(this.funcion())
+  );
+
+  // 🧮 Subtotales estimados de los asientos seleccionados actualmente
+  subtotalPesosSeleccionados = computed(() => {
+    const func = this.funcion();
+    if (!func) return 0;
+    return this.misAsientosSeleccionados().reduce(
+      (acc, asiento) =>
+        acc + this.entradasService.obtenerPrecioAsiento(func, asiento.fila, 'efectivo'),
+      0
+    );
+  });
+
+  subtotalPuntosSeleccionados = computed(() => {
+    const func = this.funcion();
+    if (!func) return 0;
+    return this.misAsientosSeleccionados().reduce(
+      (acc, asiento) =>
+        acc + this.entradasService.obtenerPrecioAsiento(func, asiento.fila, 'puntos'),
+      0
+    );
+  });
+
   @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any): void {
     if (this.misAsientosSeleccionados().length > 0) {
@@ -55,13 +103,11 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy, Componen
 
   // 🛡️ Métodos requeridos por el CanDeactivate Guard
   puedeSalir(): boolean {
-    // Si tiene asientos seleccionados y no ha ido a pagar/candybar, avisa
     return this.misAsientosSeleccionados().length === 0;
   }
 
   async liberarAsientosTemporales(): Promise<void> {
     try {
-      // Liberamos cada asiento que el usuario tenía en estado 'seleccionado'
       const asientos = this.misAsientosSeleccionados();
       for (const asiento of asientos) {
         await this.entradasService.liberarAsiento(asiento.id);
@@ -100,12 +146,19 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy, Componen
     }
   }
 
-
-
   ngOnDestroy(): void {
     if (this.realtimeChannel) {
       supabase.removeChannel(this.realtimeChannel);
     }
+  }
+
+  // 🌟 Helpers de VIP para plantilla y lógica
+  esVip(fila: string): boolean {
+    return this.entradasService.esFilaVip(fila);
+  }
+
+  obtenerPrecioUnitarioAsientoPesos(fila: string): number {
+    return this.entradasService.obtenerPrecioAsiento(this.funcion(), fila, 'efectivo');
   }
 
   obtenerBloquesFila(fila: string): { izquierda: number[]; centro: number[]; derecha: number[] } {
@@ -146,9 +199,9 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy, Componen
         const key = `${e.fila}-${e.numero_asiento}`;
         mapaOcupados.set(key, e);
 
-        const esMio = uId 
-          ? (e.usuario_id === uId)
-          : (this.idsAsientosAnonimo.includes(e.id));
+        const esMio = uId
+          ? e.usuario_id === uId
+          : this.idsAsientosAnonimo.includes(e.id);
 
         if (esMio && e.estado === 'seleccionado') {
           misSeleccionadosTemp.push(e);
@@ -195,7 +248,7 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy, Componen
             mapaActual.set(key, newData);
           }
           this.asientosOcupados.set(mapaActual);
-        },
+        }
       )
       .subscribe();
   }
@@ -207,7 +260,7 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy, Componen
 
       if (this.misAsientosSeleccionados().length > this.cantidadPermitida()) {
         alert(
-          `Has reducido el límite a ${this.cantidadPermitida()} entradas. Por favor deselecciona los sobrantes.`,
+          `Has reducido el límite a ${this.cantidadPermitida()} entradas. Por favor deselecciona los sobrantes.`
         );
       }
     }
@@ -223,9 +276,9 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy, Componen
     const uId = this.usuarioId();
 
     try {
-      const esMioExistente = uId 
-        ? (asientoExistente?.usuario_id === uId)
-        : (this.idsAsientosAnonimo.includes(asientoExistente?.id));
+      const esMioExistente = uId
+        ? asientoExistente?.usuario_id === uId
+        : this.idsAsientosAnonimo.includes(asientoExistente?.id);
 
       const mapaActual = new Map(this.asientosOcupados());
       const misSelActual = [...this.misAsientosSeleccionados()];
@@ -237,13 +290,14 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy, Componen
           const filtrados = misSelActual.filter((a) => a.id !== asientoExistente.id);
           this.misAsientosSeleccionados.set(filtrados);
 
-          // 🌟 Si ya no quedan asientos seleccionados localmente, limpiamos el localStorage del Candy Bar
           if (filtrados.length === 0) {
             localStorage.removeItem('asientosSeleccionados');
           }
 
           if (!uId) {
-            this.idsAsientosAnonimo = this.idsAsientosAnonimo.filter(id => id !== asientoExistente.id);
+            this.idsAsientosAnonimo = this.idsAsientosAnonimo.filter(
+              (id) => id !== asientoExistente.id
+            );
             this.actualizarLocalStorageAnonimo();
           }
         } else {
@@ -252,7 +306,7 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy, Componen
       } else {
         if (misSelActual.length >= this.cantidadPermitida()) {
           alert(
-            `Solo puedes seleccionar un máximo de ${this.cantidadPermitida()} entrada(s) según tu selección actual.`,
+            `Solo puedes seleccionar un máximo de ${this.cantidadPermitida()} entrada(s) según tu selección actual.`
           );
           this.asientosEnProceso.delete(key);
           return;
@@ -262,7 +316,7 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy, Componen
           this.funcionId(),
           uId,
           fila,
-          numero,
+          numero
         );
 
         mapaActual.set(key, nuevaEntrada);
@@ -297,38 +351,37 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy, Componen
     const key = `${fila}-${numero}`;
     const asiento = this.asientosOcupados().get(key);
     const uId = this.usuarioId();
+    const esAsientoVip = this.esVip(fila);
 
     if (!asiento) {
       return {
         'asiento-libre': true,
+        'asiento-vip': esAsientoVip,
         'asiento-mio': false,
         'asiento-mio-comprado': false,
-        'asiento-ocupado': false
+        'asiento-ocupado': false,
       };
     }
 
-    const esMio = uId 
-      ? (asiento.usuario_id === uId)
-      : (this.idsAsientosAnonimo.includes(asiento.id));
+    const esMio = uId
+      ? asiento.usuario_id === uId
+      : this.idsAsientosAnonimo.includes(asiento.id);
 
     const esMioSeleccionado = esMio && asiento.estado === 'seleccionado';
     const esCompradoGeneral = this.esCompradoORetirado(asiento);
-    
-    // Si es tuyo y ya fue comprado/retirado -> Azul
+
     const esMioComprado = esMio && esCompradoGeneral;
-    
-    // Si fue comprado/retirado por otro, o seleccionado por otro -> Gris
     const ocupadoPorOtro = !esMio && (asiento.estado === 'seleccionado' || esCompradoGeneral);
 
     return {
       'asiento-libre': false,
+      'asiento-vip': esAsientoVip,
       'asiento-mio': esMioSeleccionado,
       'asiento-mio-comprado': esMioComprado,
       'asiento-ocupado': ocupadoPorOtro,
     };
   }
 
-  // 🌟 Valida si el asiento ya se encuentra comprado o retirado
   private esCompradoORetirado(asiento: any): boolean {
     return asiento && (asiento.estado === 'comprado' || asiento.estado === 'retirado');
   }
@@ -339,15 +392,13 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy, Componen
     if (!asiento) return false;
 
     const uId = this.usuarioId();
-    const esMio = uId 
-      ? (asiento.usuario_id === uId)
-      : (this.idsAsientosAnonimo.includes(asiento.id));
+    const esMio = uId
+      ? asiento.usuario_id === uId
+      : this.idsAsientosAnonimo.includes(asiento.id);
 
-    // Se deshabilita si ya fue comprado/retirado por cualquiera, o si está seleccionado por otra persona
     return this.esCompradoORetirado(asiento) || (!esMio && asiento.estado === 'seleccionado');
   }
 
-  // 🔹 Funciones trackBy para los bucles *ngFor
   trackByFila(index: number, fila: string): string {
     return fila;
   }
@@ -384,7 +435,10 @@ export class SeleccionarAsientosComponent implements OnInit, OnDestroy, Componen
       return;
     }
 
-    localStorage.setItem('asientosSeleccionados', JSON.stringify(this.misAsientosSeleccionados()));
+    localStorage.setItem(
+      'asientosSeleccionados',
+      JSON.stringify(this.misAsientosSeleccionados())
+    );
     this.router.navigate(['/candybar']);
   }
 }

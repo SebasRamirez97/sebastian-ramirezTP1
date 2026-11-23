@@ -1,0 +1,109 @@
+<div class="cartelera-container">
+  <h2>🎬 Próximamente</h2>
+
+  <!-- 🔔 Avisos cuando ya hay entradas disponibles para una película seguida -->
+  <div *ngIf="proximamenteService.avisosDisponibles().length > 0" class="alert alert-success">
+    <div *ngFor="let aviso of proximamenteService.avisosDisponibles()">
+      🔔 ¡Las entradas para <strong>{{ aviso.nombrePelicula }}</strong> ya están disponibles!
+      <a [routerLink]="['/peliculas', aviso.peliculaId, 'funciones']" class="ms-2 fw-bold">
+        Ver funciones
+      </a>
+    </div>
+  </div>
+
+  <!-- 🌟 BUSCADOR Y PULSADORES DE GÉNERO -->
+  <div class="buscador-seccion">
+    <div class="input-grupo">
+      <span class="icono-busqueda">🔍</span>
+      <input
+        type="text"
+        [ngModel]="filtroTexto()"
+        (ngModelChange)="filtroTexto.set($event)"
+        placeholder="Buscar próximo estreno por título..."
+        class="input-buscador"
+      />
+    </div>
+
+    <div class="pulsadores-generos">
+      <button
+        type="button"
+        *ngFor="let gen of generosDisponibles()"
+        (click)="seleccionarGenero(gen)"
+        [class.activo]="generoSeleccionado() === gen"
+        class="btn-genero-chip"
+      >
+        {{ gen }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Estado de carga -->
+  <div *ngIf="cargando(); else contenidoCargado" class="loading-container">
+    <p class="loading">Cargando próximos estrenos...</p>
+  </div>
+
+  <ng-template #contenidoCargado>
+    <div class="grid-cartelera">
+      <div
+        *ngFor="let pelicula of peliculasFiltradas(); trackBy: trackByPelicula"
+        class="card-pelicula"
+      >
+        <!-- Póster y badge de edad -->
+        <div class="poster-wrapper" (click)="verDetalle(pelicula.id)">
+          <img
+            [src]="pelicula.imagen || pelicula.poster_url || 'assets/placeholder-poster.jpg'"
+            [alt]="pelicula.nombre"
+            class="poster-img"
+          />
+
+          <div
+            class="badge-edad"
+            [ngClass]="{
+              atp: pelicula.limite_edad === 'ATP',
+              mayores: pelicula.limite_edad !== 'ATP',
+            }"
+          >
+            {{ pelicula.limite_edad || 'ATP' }}
+          </div>
+
+          <div class="overlay">
+            <span>Ver detalles</span>
+          </div>
+        </div>
+
+        <!-- Información de la película -->
+        <div class="card-info">
+          <h3 class="titulo">{{ pelicula.nombre }}</h3>
+          <p class="detalle genero-tag">🎭 {{ formatearGeneros(pelicula.genero) }}</p>
+          <p class="detalle">⏱️ <strong>Duración:</strong> {{ pelicula.duracion }} min</p>
+          <p class="detalle">
+            📅 <strong>Estreno:</strong> {{ pelicula.fecha_estreno | date : 'dd/MM/yyyy' }}
+          </p>
+
+          <!-- Badge de Preventa activa si aplica -->
+          <div *ngIf="estadoPreventa(pelicula).enPreventa" class="badge bg-warning text-dark mb-2">
+            🎟️ ¡En Preventa! Desde
+            {{ estadoPreventa(pelicula).fechaInicioPreventa | date : 'dd/MM' }} — ${{
+              estadoPreventa(pelicula).precioPesosEfectivo | number : '1.2-2'
+            }}
+          </div>
+
+          <!-- Botón de alerta de estreno -->
+          <button
+            type="button"
+            class="btn w-100 mt-2"
+            [class.btn-outline-primary]="!tieneAlerta(pelicula.id)"
+            [class.btn-success]="tieneAlerta(pelicula.id)"
+            (click)="alternarAlerta($event, pelicula)"
+          >
+            {{ tieneAlerta(pelicula.id) ? '🔔 Alerta activada' : '🔕 Avisarme cuando salgan' }}
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="peliculasFiltradas().length === 0" class="sin-peliculas">
+        <p>No se encontraron próximos estrenos que coincidan con tu búsqueda.</p>
+      </div>
+    </div>
+  </ng-template>
+</div>
