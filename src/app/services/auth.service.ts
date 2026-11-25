@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
 import { ClienteMetadata, EmpleadoMetadata, AdminMetadata, AnonimoMetadata } from '../models/user-metadata';
 import { BehaviorSubject, Observable } from 'rxjs';
@@ -35,49 +36,88 @@ export class AuthService {
     this.rolSubject.next(rol);
   }
 
-  async signUpCliente(cliente: { email: string; password: string; } & Omit<ClienteMetadata, 'rol'>) {
-    const { data, error } = await supabase.auth.signUp({
-      email: cliente.email,
-      password: cliente.password,
-      options: { data: { rol: 'cliente' } }
+  private crearClienteSinSesion() {
+    const supabaseUrl = (supabase as any).supabaseUrl as string;
+    const supabaseKey = (supabase as any).supabaseKey as string;
+
+    return createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
     });
-    if (error) throw error;
-
-    const user = data.user;
-    if (user) {
-      await supabase.from('clientes').insert([{
-        id: user.id,
-        nombre: cliente.nombre,
-        apellido: cliente.apellido,
-        fecha_nacimiento: cliente.fechaNacimiento,
-        tipo_sangre: cliente.tipoSangre,
-        color_ojos: cliente.colorOjos,
-        vacaciones: cliente.vacaciones
-      }]);
-    }
-
-    return data;
   }
 
-  async signUpEmpleado(empleado: { email: string; password: string; } & Omit<EmpleadoMetadata, 'rol'>) {
-    const { data, error } = await supabase.auth.signUp({
-      email: empleado.email,
-      password: empleado.password,
-      options: { data: { rol: 'empleado' } }
+  async signUpCliente(cliente: { email: string; password: string; } & Omit<ClienteMetadata, 'rol'>) {
+    const tempSupabase = this.crearClienteSinSesion();
+
+    const { data, error } = await tempSupabase.auth.signUp({
+      email: cliente.email,
+      password: cliente.password,
+      options: {
+        data: {
+          nombre: cliente.nombre,
+          apellido: cliente.apellido,
+          rol: 'cliente',
+        },
+      },
     });
     if (error) throw error;
 
     const user = data.user;
-    if (user) {
-      await supabase.from('empleados').insert([{
-        id: user.id,
-        nombre: empleado.nombre,
-        apellido: empleado.apellido,
-        estado: 'activo'
-      }]);
+    if (!user) {
+      throw new Error('No se pudo obtener el usuario creado para el cliente.');
     }
 
-    return data;
+    const { error: insertError } = await supabase.from('clientes').insert([{
+      id: user.id,
+      nombre: cliente.nombre,
+      apellido: cliente.apellido,
+      fecha_nacimiento: cliente.fechaNacimiento,
+      tipo_sangre: cliente.tipoSangre,
+      color_ojos: cliente.colorOjos,
+      vacaciones: cliente.vacaciones
+    }]);
+    if (insertError) throw insertError;
+
+    // Devolvemos user sin sesión activa para no loguear automáticamente
+    return { id: user.id, user: data.user, session: null };
+  }
+
+  async signUpEmpleado(
+    empleado: { email: string; password: string; rol_id?: string | null } & Omit<EmpleadoMetadata, 'rol'>
+  ) {
+    const tempSupabase = this.crearClienteSinSesion();
+
+    const { data, error } = await tempSupabase.auth.signUp({
+      email: empleado.email,
+      password: empleado.password,
+      options: {
+        data: {
+          nombre: empleado.nombre,
+          apellido: empleado.apellido,
+          rol: 'empleado',
+        },
+      },
+    });
+    if (error) throw error;
+
+    const user = data.user;
+    if (!user) {
+      throw new Error('No se pudo obtener el usuario creado para el empleado.');
+    }
+
+    const { error: insertError } = await supabase.from('empleados').insert([{
+      id: user.id,
+      nombre: empleado.nombre,
+      apellido: empleado.apellido,
+      estado: 'activo',
+      rol_id: empleado.rol_id || null,
+    }]);
+    if (insertError) throw insertError;
+
+    return { id: user.id, user: data.user, session: null };
   }
 
   async signIn(email: string, password: string) {
@@ -85,7 +125,7 @@ export class AuthService {
     if (error) throw error;
 
     const usuarioCompleto = await this.getUser();
-    
+
     // Casteo para evitar que TypeScript marque error en user_metadata o perfil
     const userAny = usuarioCompleto as any;
     const rolDetectado = userAny?.perfil?.rol || userAny?.user_metadata?.rol || 'cliente';
@@ -182,7 +222,7 @@ export class AuthService {
       callback(!!session);
     });
   }
-  
+
   async checkInitialSession(): Promise<boolean> {
     const { data } = await supabase.auth.getSession();
     return !!data.session;
