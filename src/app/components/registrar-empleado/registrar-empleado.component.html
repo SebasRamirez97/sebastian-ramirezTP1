@@ -1,10 +1,9 @@
 <div class="registro-container">
   <div class="card-registro">
     <h2>👨‍💼 Registrar Nuevo Empleado</h2>
-    <p>Complete los datos para dar de alta a un nuevo empleado en el sistema.</p>
+    <p>Complete los datos y asigne un rol para dar de alta a un nuevo empleado en el sistema.</p>
 
     <form [formGroup]="formEmpleado" (ngSubmit)="registrarEmpleado()">
-      
       <!-- Email -->
       <div class="campo-form">
         <label>Correo Electrónico</label>
@@ -41,12 +40,25 @@
         </div>
       </div>
 
+      <!-- Rol -->
+      <div class="campo-form">
+        <label>Rol del Empleado</label>
+        <select formControlName="rol_id" [disabled]="cargandoRoles()">
+          <option value="" disabled>Seleccione un rol</option>
+          <option *ngFor="let rol of roles()" [value]="rol.id">
+            {{ rol.nombre }}
+          </option>
+        </select>
+        <div *ngIf="formEmpleado.get('rol_id')?.invalid && (formEmpleado.get('rol_id')?.touched || submitted())">
+          <small class="error">Debe seleccionar un rol para el empleado.</small>
+        </div>
+      </div>
+
       <!-- Botones de Acción -->
       <div class="botones-accion">
         <button type="submit" class="btn-primario">Registrar Empleado</button>
         <button type="button" class="btn-secundario" (click)="volver()">Cancelar</button>
       </div>
-
     </form>
   </div>
 </div>

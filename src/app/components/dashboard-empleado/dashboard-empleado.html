@@ -1,0 +1,77 @@
+<section class="dashboard-empleado">
+  <header class="header">
+    <h2>Panel de Trabajo — Empleados</h2>
+    <p>Accesos habilitados según tu rol asignado.</p>
+  </header>
+
+  @if (cargando()) {
+    <p class="estado">Cargando accesos...</p>
+  } @else {
+    @if (accesosHabilitados().length > 0) {
+      <div class="grid-modulos">
+        @for (modulo of accesosHabilitados(); track modulo.clave) {
+          <article class="tarjeta-modulo">
+            <h3>{{ modulo.titulo }}</h3>
+            <p>{{ modulo.descripcion }}</p>
+            <a [routerLink]="modulo.rutaDashboard" class="btn-acceso">
+              {{ modulo.etiquetaBoton }}
+            </a>
+          </article>
+        }
+      </div>
+    } @else if (!esAdmin()) {
+      <div class="sin-permisos">
+        <p>Todavía no tenés un rol asignado con permisos operativos.</p>
+        <small>Consultá con administración para que te asignen un rol.</small>
+      </div>
+    }
+
+    <section class="panel-asignacion">
+      <h3>Lista de Empleados y Asignación de Rol</h3>
+
+      @if (mensajeAsignacion(); as msg) {
+        <div [class]="msg.tipo === 'ok' ? 'alerta-ok' : 'alerta-err'">{{ msg.texto }}</div>
+      }
+
+      @if (empleados().length === 0) {
+        <p>No hay empleados registrados.</p>
+      } @else {
+        <div class="tabla-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Empleado</th>
+                <th>Estado</th>
+                <th>Rol Actual</th>
+                <th>Asignar Rol</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (emp of empleados(); track emp.id) {
+                <tr>
+                  <td>{{ emp.apellido }}, {{ emp.nombre }}</td>
+                  <td>{{ emp.estado || 'activo' }}</td>
+                  <td>{{ emp.rol_nombre || 'Sin rol' }}</td>
+                  <td>
+                    <select [(ngModel)]="seleccionRolPorEmpleado[emp.id]">
+                      <option value="">-- Sin rol --</option>
+                      @for (rol of roles(); track rol.id) {
+                        <option [value]="rol.id">{{ rol.nombre }}</option>
+                      }
+                    </select>
+                  </td>
+                  <td>
+                    <button type="button" class="btn-guardar" (click)="asignarRol(emp.id)">
+                      Guardar
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+</section>

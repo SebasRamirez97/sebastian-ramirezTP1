@@ -1,8 +1,9 @@
-import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
+import { ClavePermiso, RolesPermisosService } from '../../services/roles-permisos.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -12,23 +13,34 @@ import { AuthService } from '../../services/auth.service';
   styleUrls: ['./sidebar.component.css']
 })
 export class SidebarComponent implements OnInit, OnDestroy {
-  // 🔹 Inyección moderna con inject()
   private authService = inject(AuthService);
+  private rolesPermisosService = inject(RolesPermisosService);
   private router = inject(Router);
 
-  // 🔹 Estado de rol manejado con Signals
   rol = signal<string>('');
+  permisosEmpleado = signal<ClavePermiso[]>([]);
   private rolSub!: Subscription;
 
+  tienePeliculas = computed(() => this.permisosEmpleado().includes('peliculas'));
+  tieneCandyBar = computed(() => this.permisosEmpleado().includes('candybar'));
+  tienePromociones = computed(() => this.permisosEmpleado().includes('promociones'));
+  tieneReportes = computed(() => this.permisosEmpleado().includes('reportes'));
+  tieneVerificarOrden = computed(() => this.permisosEmpleado().includes('verificar_orden'));
+
   ngOnInit(): void {
-    // 🔹 Escucha los cambios de rol en tiempo real desde AuthService
-    this.rolSub = this.authService.rol$.subscribe((nuevoRol) => {
+    this.rolSub = this.authService.rol$.subscribe(async (nuevoRol) => {
       this.rol.set(nuevoRol);
+
+      if (nuevoRol === 'empleado') {
+        const estado = await this.rolesPermisosService.cargarPermisosUsuarioActual();
+        this.permisosEmpleado.set(estado.permisos);
+      } else {
+        this.permisosEmpleado.set([]);
+      }
     });
   }
 
   ngOnDestroy(): void {
-    // 🔹 Limpieza de la suscripción para evitar fugas de memoria (Memory Leaks)
     if (this.rolSub) {
       this.rolSub.unsubscribe();
     }
@@ -36,6 +48,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   async cerrarSesion(): Promise<void> {
     await this.authService.signOut();
+    this.permisosEmpleado.set([]);
     this.router.navigate(['/login']);
   }
 

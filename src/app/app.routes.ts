@@ -7,6 +7,7 @@ import { empleadoGuard } from './guards/empleado.guard';
 import { clienteGuard } from './guards/cliente.guard';
 import { loginGuard } from './guards/login.guard';
 import { liberarAsientosGuard } from './guards/liberar-asientos.guard';
+import { permisoGuard } from './guards/permiso.guard';
 
 export const routes: Routes = [
   {
@@ -34,12 +35,14 @@ export const routes: Routes = [
       import('./components/cartelera/cartelera').then((m) => m.CarteleraComponent),
     canActivate: [authGuard],
   },
+
   {
     path: 'armar-cartelera',
     loadComponent: () =>
       import('./components/crear-pelicula/crear-pelicula').then((m) => m.CrearPeliculaComponent),
-    canActivate: [adminGuard],
+    canActivate: [permisoGuard('peliculas')],
   },
+
   {
     path: 'peliculas/:id',
     loadComponent: () =>
@@ -47,36 +50,6 @@ export const routes: Routes = [
         (m) => m.DetallePeliculaComponent,
       ),
     canActivate: [authGuard],
-  },
-
-  // Candy-Bar
-  {
-    path: 'candybar',
-    loadComponent: () =>
-      import('./components/candy-bar/candy-bar').then((m) => m.CandyBarComponent),
-    canActivate: [authGuard],
-    canDeactivate: [liberarAsientosGuard],
-  },
-  {
-    path: 'crear-producto',
-    loadComponent: () =>
-      import('./components/crear-producto/crear-producto').then((m) => m.CrearProductoComponent),
-    canActivate: [adminGuard],
-  },
-
-  {
-    path: 'crear-combo',
-    loadComponent: () =>
-      import('./components/crear-combo/crear-combo').then((m) => m.CrearComboComponent),
-    canActivate: [adminGuard],
-  },
-
-  // 🎟️ Gestión de Cupones (Admin) 👈 NUEVA RUTA
-  {
-    path: 'gestionar-cupones',
-    loadComponent: () =>
-      import('./components/gestion-cupones/gestion-cupones').then((m) => m.GestionCuponesComponent),
-    canActivate: [adminGuard],
   },
 
   // Funciones de una pelicula
@@ -92,13 +65,43 @@ export const routes: Routes = [
     path: 'lista-funciones',
     loadComponent: () =>
       import('./components/lista-funciones/lista-funciones').then((m) => m.ListaFuncionesComponent),
-    canActivate: [adminGuard],
+    canActivate: [permisoGuard('peliculas')],
   },
   {
     path: 'editar-funcion/:id',
     loadComponent: () =>
       import('./components/editar-funcion/editar-funcion').then((m) => m.EditarFuncionComponent),
-    canActivate: [adminGuard],
+    canActivate: [permisoGuard('peliculas')],
+  },
+
+  // Candy-Bar
+  {
+    path: 'candybar',
+    loadComponent: () =>
+      import('./components/candy-bar/candy-bar').then((m) => m.CandyBarComponent),
+    canActivate: [authGuard],
+    canDeactivate: [liberarAsientosGuard],
+  },
+  {
+    path: 'crear-producto',
+    loadComponent: () =>
+      import('./components/crear-producto/crear-producto').then((m) => m.CrearProductoComponent),
+    canActivate: [permisoGuard('candybar')],
+  },
+
+  {
+    path: 'crear-combo',
+    loadComponent: () =>
+      import('./components/crear-combo/crear-combo').then((m) => m.CrearComboComponent),
+    canActivate: [permisoGuard('candybar')],
+  },
+
+  // 🎟️ Gestión de Cupones
+  {
+    path: 'gestionar-cupones',
+    loadComponent: () =>
+      import('./components/gestion-cupones/gestion-cupones').then((m) => m.GestionCuponesComponent),
+    canActivate: [permisoGuard('promociones')],
   },
 
   // Para entradas de cine
@@ -124,12 +127,12 @@ export const routes: Routes = [
     canDeactivate: [liberarAsientosGuard],
   },
 
-  // 🍿 Funciones de Cine (Admin)
+  // 🍿 Funciones de Cine
   {
     path: 'crear-funcion',
     loadComponent: () =>
       import('./components/crear-funcion/crear-funcion').then((m) => m.CrearFuncionComponent),
-    canActivate: [adminGuard],
+    canActivate: [permisoGuard('peliculas')],
   },
 
   // 🛠️ Admin
@@ -149,7 +152,7 @@ export const routes: Routes = [
       import('./components/verificar-orden/verificar-orden.component').then(
         (m) => m.VerificarOrdenComponent,
       ),
-    canActivate: [empleadoGuard],
+    canActivate: [permisoGuard('verificar_orden')],
   },
 
   // 👤 Cliente
@@ -192,32 +195,39 @@ export const routes: Routes = [
   },
 
   {
-    path: 'reportes', // o dentro de tu ruta 'admin'
+    path: 'reportes',
     loadComponent: () =>
       import('./components/admin-reportes/admin-reportes').then((m) => m.AdminReportesComponent),
-    canActivate: [adminGuard],
+    canActivate: [permisoGuard('reportes')],
   },
 
   {
-    path: 'admin-propuestas', // o dentro de tu ruta 'admin'
+    path: 'admin-propuestas',
     loadComponent: () =>
-      import('./components/admin-propuestas/admin-propuestas').then((m) => m.AdminPropuestasComponent),
-    canActivate: [adminGuard],
+      import('./components/admin-propuestas/admin-propuestas').then(
+        (m) => m.AdminPropuestasComponent,
+      ),
+    canActivate: [permisoGuard('peliculas')],
   },
 
   {
-    path: 'admin-propuestas', // o dentro de tu ruta 'admin'
+    path: 'propuesta-cliente',
     loadComponent: () =>
-      import('./components/admin-propuestas/admin-propuestas').then((m) => m.AdminPropuestasComponent),
-    canActivate: [adminGuard],
-  },
-
-  {
-    path: 'propuesta-cliente', // o dentro de tu ruta 'admin'
-    loadComponent: () =>
-      import('./components/propuestas-cliente/propuestas-cliente').then((m) => m.PropuestasClienteComponent),
+      import('./components/propuestas-cliente/propuestas-cliente').then(
+        (m) => m.PropuestasClienteComponent,
+      ),
     canActivate: [clienteGuard],
   },
+
+  {
+    path: 'dashboard-empleados',
+    loadComponent: () =>
+      import('./components/dashboard-empleado/dashboard-empleado').then(
+        (m) => m.DashboardEmpleadoComponent,
+      ),
+    canActivate: [adminGuard],
+  },
+
   // 🔄 Redirecciones
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: '**', redirectTo: '/login' },

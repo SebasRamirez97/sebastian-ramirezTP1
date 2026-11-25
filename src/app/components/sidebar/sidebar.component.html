@@ -7,46 +7,71 @@
       <li><a routerLink="/cartelera">🎬 Cartelera</a></li>
       <li><a routerLink="/armar-cartelera">➕ Crear Película</a></li>
       <li><a routerLink="/crear-funcion">🍿 Crear Función</a></li>
-      <li><a routerLink="/candybar">🍿 Candy Bar </a></li>
-      <li><a routerLink="/lista-funciones">📅 Agenda Funciones</a></li> 
+      <li><a routerLink="/candybar">🍿 Candy Bar</a></li>
+      <li><a routerLink="/lista-funciones">📅 Agenda Funciones</a></li>
       <li><a routerLink="/gestionar-cupones">🎟️ Gestionar Cupones</a></li>
       <li><a routerLink="/registrar-empleado">📝 Registrar Empleado</a></li>
-      <li><a routerLink="/proximamente">🎬 Proximamente</a></li>
-      <li><a routerLink="/admin-propuestas"> 📝Lista de Propuestas</a></li>
-      <li><a routerLink="/reportes">📝 Reportes</a></li>
+      <li><a routerLink="/proximamente">🎬 Próximamente</a></li>
+      <li><a routerLink="/admin-propuestas">📝 Lista de Propuestas</a></li>
+      <li><a routerLink="/reportes">📊 Reportes</a></li>
+      <li><a routerLink="/dashboard-empleados">👥 Dashboard Empleados</a></li>
     </ng-container>
 
-    <!-- Empleado -->
+    <!-- Empleado (dinámico según rol asignado) -->
     <ng-container *ngIf="rol() === 'empleado'">
       <li><a routerLink="/home">🏠 Inicio</a></li>
-      <li><a routerLink="/verificar-orden">✅ Verificar Orden</a></li>
+
+      <ng-container *ngIf="tienePeliculas()">
+        <li><a routerLink="/cartelera">🎬 Cartelera</a></li>
+        <li><a routerLink="/armar-cartelera">➕ Crear Película</a></li>
+        <li><a routerLink="/crear-funcion">🍿 Crear Función</a></li>
+        <li><a routerLink="/lista-funciones">📅 Agenda Funciones</a></li>
+        <li><a routerLink="/proximamente">🎬 Próximamente</a></li>
+      </ng-container>
+
+      <ng-container *ngIf="tieneCandyBar()">
+        <li><a routerLink="/candybar">🍿 Candy Bar</a></li>
+        <li><a routerLink="/crear-producto">➕ Crear Producto</a></li>
+        <li><a routerLink="/crear-combo">🎁 Crear Combo</a></li>
+      </ng-container>
+
+      <ng-container *ngIf="tienePromociones()">
+        <li><a routerLink="/gestionar-cupones">🎟️ Gestionar Cupones</a></li>
+      </ng-container>
+
+      <ng-container *ngIf="tieneReportes()">
+        <li><a routerLink="/reportes">📊 Reportes</a></li>
+      </ng-container>
+
+      <ng-container *ngIf="tieneVerificarOrden()">
+        <li><a routerLink="/verificar-orden">✅ Verificar Orden</a></li>
+      </ng-container>
     </ng-container>
 
     <!-- Cliente -->
     <ng-container *ngIf="rol() === 'cliente'">
       <li><a routerLink="/home">🏠 Inicio</a></li>
       <li><a routerLink="/cartelera">🎬 Cartelera</a></li>
-      <li><a routerLink="/candybar">🍿 Candy Bar </a></li>
-      <li><a routerLink="/mis-ordenes">🎟️ Mis ordenes</a></li>
+      <li><a routerLink="/candybar">🍿 Candy Bar</a></li>
+      <li><a routerLink="/mis-ordenes">🎟️ Mis órdenes</a></li>
       <li><a routerLink="/estado-cliente">💳 Estado de Cuenta</a></li>
-      <li><a routerLink="/mis-peliculas">🎬 Mis peliculas</a></li>
-      <li><a routerLink="/proximamente">🎬 Proximamente</a></li>
-      <li><a routerLink="/propuesta-cliente"> 📝Proponer pelicula</a></li>
-
+      <li><a routerLink="/mis-peliculas">🎬 Mis películas</a></li>
+      <li><a routerLink="/proximamente">🎬 Próximamente</a></li>
+      <li><a routerLink="/propuesta-cliente">📝 Proponer película</a></li>
     </ng-container>
 
     <!-- Anónimo -->
     <ng-container *ngIf="rol() === 'anonimo'">
       <li><a routerLink="/home">🏠 Inicio</a></li>
       <li><a routerLink="/cartelera">🎬 Ver Cartelera</a></li>
-      <li><a routerLink="/candybar">🍿 Candy Bar </a></li>
+      <li><a routerLink="/candybar">🍿 Candy Bar</a></li>
     </ng-container>
   </ul>
 
   <!-- Footer con lógica diferida según el tipo de usuario -->
   <div class="sidebar-footer">
     <button *ngIf="rol() === 'anonimo'; else botonCerrarSesion" (click)="salirAnonimo()">🚪 Salir</button>
-    
+
     <ng-template #botonCerrarSesion>
       <button (click)="cerrarSesion()">🚪 Cerrar sesión</button>
     </ng-template>
