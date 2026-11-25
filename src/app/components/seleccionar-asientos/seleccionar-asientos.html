@@ -4,7 +4,10 @@
     <button class="btn btn-secundario" (click)="volverAFunciones()">⬅ Volver a Funciones</button>
     <h2>🎟️ Selecciona tus Asientos</h2>
   </div>
-
+  <div *ngIf="enPreventaActiva()" class="alerta-preventa">
+  🎟️ <strong>Preventa anticipada:</strong> los precios ya incluyen un recargo del
+  <strong>{{ porcentajePreventa() }}%</strong> por compra anticipada antes del estreno.
+</div>
   <!-- Estado de carga con *ngIf / *ngElse -->
   <div *ngIf="cargando(); else contenidoSala">
     <p class="loading">Cargando mapa de la sala...</p>

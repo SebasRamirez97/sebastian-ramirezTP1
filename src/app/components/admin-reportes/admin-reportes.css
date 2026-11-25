@@ -1,0 +1,237 @@
+.admin-reportes {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
+
+.header-panel {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.subtitulo {
+  margin: 0.25rem 0 0;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.acciones-exportar,
+.barra-filtros,
+.controles-grafico {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+  font-weight: 600;
+  background: #fff;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primario {
+  background: #1976d2;
+  color: #fff;
+  border-color: #1976d2;
+}
+
+.btn-excel {
+  background: #1e7e34;
+  color: #fff;
+  border-color: #1e7e34;
+}
+
+.btn-pdf {
+  background: #b71c1c;
+  color: #fff;
+  border-color: #b71c1c;
+}
+
+.grid-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.kpi.destacado {
+  border-color: #1976d2;
+  background: #f5f9ff;
+}
+
+.kpi-label {
+  display: block;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.kpi-valor {
+  display: block;
+  font-size: 1.6rem;
+  margin: 0.35rem 0;
+}
+
+.lista-metodos {
+  list-style: none;
+  padding: 0;
+  margin: 0.4rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.lista-metodos li {
+  display: flex;
+  justify-content: space-between;
+}
+
+.seccion-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.segmented button {
+  border: none;
+  background: #fff;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+}
+
+.segmented button.activo {
+  background: #1976d2;
+  color: #fff;
+  font-weight: 600;
+}
+
+.grafico-barras {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.barra-fila {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) 1fr 90px;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.barra-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.pelicula-titulo {
+  font-weight: 600;
+}
+
+.periodo-tag {
+  font-size: 0.78rem;
+  color: #666;
+}
+
+.barra-track {
+  height: 14px;
+  background: #eee;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.barra-fill {
+  height: 100%;
+  background: #1976d2;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.barra-cantidad {
+  text-align: right;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.tabla-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #eee;
+}
+
+.fila-top {
+  background: #fff8e1;
+  font-weight: 600;
+}
+
+.badge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #e3f2fd;
+  color: #0d47a1;
+}
+
+.badge[data-accion='MODIFICAR_PRECIO'] {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.badge[data-accion='VALIDAR_QR'] {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.alerta-error {
+  background: #fdecea;
+  color: #b71c1c;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+}
+
+.vacio,
+.estado-carga {
+  color: #666;
+  font-style: italic;
+}

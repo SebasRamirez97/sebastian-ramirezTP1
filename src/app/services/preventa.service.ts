@@ -1,7 +1,10 @@
 import { Injectable } from '@angular/core';
+import { formatearFechaLocal, obtenerHoyLocal } from '../utils/fechas.util';
 
 export interface EstadoPreventa {
   enPreventa: boolean;
+  porcentajePreventa: number;
+  multiplicador: number;
   fechaInicioPreventa: Date | null;
   fechaEstreno: Date | null;
   precioPesosEfectivo: number;
@@ -13,50 +16,50 @@ export interface EstadoPreventa {
 })
 export class PreventaService {
   evaluarPeliculaYFuncion(pelicula: any, funcion: any): EstadoPreventa {
-    const precioNormalPesos = Number(funcion?.precio_pesos ?? pelicula?.precio_pesos ?? 0);
-    const precioNormalPuntos = Number(funcion?.precio_puntos ?? pelicula?.precio_puntos ?? 0);
+    const precioBasePesos = Number(funcion?.precio_pesos ?? pelicula?.precio_pesos ?? 0);
+    const precioBasePuntos = Number(funcion?.precio_puntos ?? pelicula?.precio_puntos ?? 0);
 
     const estrenoRaw = pelicula?.fecha_estreno || funcion?.fecha_estreno;
-    const preventaActiva = Boolean(pelicula?.preventa_activa ?? true);
+    const preventaActiva = Boolean(pelicula?.preventa_activa);
     const diasPreventa = Number(pelicula?.dias_preventa ?? 7);
+    const pctRaw = Number(pelicula?.porcentaje_preventa ?? 50);
+    const porcentajePreventa = Number.isFinite(pctRaw) && pctRaw >= 0 ? pctRaw : 50;
 
-    if (!estrenoRaw || !preventaActiva) {
+    if (!estrenoRaw) {
       return {
         enPreventa: false,
+        porcentajePreventa: 0,
+        multiplicador: 1,
         fechaInicioPreventa: null,
-        fechaEstreno: estrenoRaw ? new Date(estrenoRaw) : null,
-        precioPesosEfectivo: precioNormalPesos,
-        precioPuntosEfectivo: precioNormalPuntos,
+        fechaEstreno: null,
+        precioPesosEfectivo: precioBasePesos,
+        precioPuntosEfectivo: precioBasePuntos,
       };
     }
 
-    const ahora = new Date();
-    const fechaEstreno = new Date(estrenoRaw);
-    const fechaInicioPreventa = new Date(
-      fechaEstreno.getTime() - diasPreventa * 24 * 60 * 60 * 1000,
-    );
+    const hoy = obtenerHoyLocal();
+    const estrenoStr = formatearFechaLocal(estrenoRaw);
+    const [anio, mes, dia] = estrenoStr.split('-').map(Number);
+    const fechaEstrenoDate = new Date(anio, mes - 1, dia);
+    const fechaInicioDate = new Date(anio, mes - 1, dia - diasPreventa);
+    const inicioStr = formatearFechaLocal(fechaInicioDate);
 
     const enPreventa =
-      !isNaN(fechaEstreno.getTime()) &&
-      ahora >= fechaInicioPreventa &&
-      ahora < fechaEstreno;
+      Boolean(estrenoStr) &&
+      preventaActiva &&
+      hoy >= inicioStr &&
+      hoy < estrenoStr;
 
-    const precioPesosPreventa =
-      pelicula?.precio_preventa_pesos != null
-        ? Number(pelicula.precio_preventa_pesos)
-        : precioNormalPesos;
-
-    const precioPuntosPreventa =
-      pelicula?.precio_preventa_puntos != null
-        ? Number(pelicula.precio_preventa_puntos)
-        : precioNormalPuntos;
+    const multiplicador = enPreventa ? 1 + porcentajePreventa / 100 : 1;
 
     return {
       enPreventa,
-      fechaInicioPreventa,
-      fechaEstreno,
-      precioPesosEfectivo: enPreventa ? precioPesosPreventa : precioNormalPesos,
-      precioPuntosEfectivo: enPreventa ? precioPuntosPreventa : precioNormalPuntos,
+      porcentajePreventa: enPreventa ? porcentajePreventa : 0,
+      multiplicador,
+      fechaInicioPreventa: fechaInicioDate,
+      fechaEstreno: fechaEstrenoDate,
+      precioPesosEfectivo: Math.round(precioBasePesos * multiplicador),
+      precioPuntosEfectivo: Math.round(precioBasePuntos * multiplicador),
     };
   }
 }

@@ -25,6 +25,5 @@ export interface Pelicula {
   // 🎟️ Configuración de preventa por película
   preventa_activa?: boolean;
   dias_preventa?: number; // Por defecto 7 días antes de fecha_estreno
-  precio_preventa_pesos?: number | null;
-  precio_preventa_puntos?: number | null;
+  porcentaje_preventa?: number | null; // Ej: 50 para un +50% sobre el precio base
 }

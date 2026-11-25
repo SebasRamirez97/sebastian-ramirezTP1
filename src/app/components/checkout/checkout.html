@@ -8,6 +8,16 @@
 
   <ng-template #contenidoCargado>
     <div class="resumen-info">
+      <!-- 🎟️ Aviso de Preventa Activa -->
+      <div
+        *ngIf="enPreventaActiva()"
+        class="alert alert-warning mb-3"
+        role="alert"
+      >
+        🎟️ <strong>Preventa anticipada activa:</strong> las entradas tienen un recargo del
+        <strong>{{ porcentajePreventa() }}%</strong> sobre su precio base por compra previa al estreno.
+      </div>
+
       <!-- 🎟️ Detalle de Asientos Elegidos -->
       <div *ngIf="misAsientos().length > 0" class="resumen-asientos mb-3">
         <h4>🎟️ Detalle de Butacas ({{ misAsientos().length }}):</h4>
@@ -19,6 +29,9 @@
               <ng-template #badgeGen>
                 <span class="badge-tipo badge-general">General</span>
               </ng-template>
+              <span *ngIf="enPreventaActiva()" class="badge-tipo badge-preventa">
+                Preventa +{{ porcentajePreventa() }}%
+              </span>
             </div>
 
             <div class="item-detalle-precio">
@@ -41,6 +54,14 @@
             </div>
           </li>
         </ul>
+
+        <div *ngIf="enPreventaActiva() && recargoPreventaEntradasPesos > 0" class="subtotal-linea">
+          <span>Recargo preventa entradas (+{{ porcentajePreventa() }}%):</span>
+          <strong>
+            +${{ recargoPreventaEntradasPesos | number : '1.2-2' }}
+            <span *ngIf="recargoPreventaEntradasPuntos > 0">(+{{ recargoPreventaEntradasPuntos }} pts)</span>
+          </strong>
+        </div>
 
         <div class="subtotal-linea">
           <span>Subtotal entradas sueltas ({{ entradasFacturablesSueltas }}):</span>

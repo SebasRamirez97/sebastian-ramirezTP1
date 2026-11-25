@@ -1,0 +1,220 @@
+<section class="admin-reportes">
+  <header class="header-panel">
+    <div>
+      <h2>Panel de Administración — Reportes y Auditoría</h2>
+      <p class="subtitulo">
+        Las vistas de películas contabilizan únicamente entradas con estado <strong>retirado</strong>.
+      </p>
+    </div>
+
+    <div class="acciones-exportar">
+      <button type="button" class="btn btn-excel" (click)="exportarExcel()" [disabled]="cargando()">
+        Exportar Excel (.xlsx)
+      </button>
+      <button type="button" class="btn btn-pdf" (click)="exportarPDF()" [disabled]="cargando()">
+        Exportar PDF
+      </button>
+      <button type="button" class="btn btn-secundario" (click)="cargarTodo()" [disabled]="cargando()">
+        Actualizar
+      </button>
+    </div>
+  </header>
+
+  <!-- Filtros de fecha -->
+  <div class="barra-filtros">
+    <label>
+      Desde:
+      <input
+        type="date"
+        [ngModel]="fechaDesde()"
+        (ngModelChange)="fechaDesde.set($event)"
+      />
+    </label>
+    <label>
+      Hasta:
+      <input
+        type="date"
+        [ngModel]="fechaHasta()"
+        (ngModelChange)="fechaHasta.set($event)"
+      />
+    </label>
+    <button type="button" class="btn btn-primario" (click)="cargarTodo()" [disabled]="cargando()">
+      Aplicar rango
+    </button>
+    <button type="button" class="btn btn-secundario" (click)="limpiarFiltros()" [disabled]="cargando()">
+      Limpiar
+    </button>
+  </div>
+
+  @if (errorMsg()) {
+    <div class="alerta-error">{{ errorMsg() }}</div>
+  }
+
+  @if (cargando()) {
+    <div class="estado-carga">Cargando estadísticas y registros...</div>
+  } @else {
+    <!-- Tarjetas KPI principales -->
+    <div class="grid-kpis">
+      <article class="card kpi">
+        <span class="kpi-label">Facturación Total</span>
+        <strong class="kpi-valor">${{ facturacion().totalFacturado | number: '1.0-2' }}</strong>
+        <small>{{ facturacion().cantidadOrdenes }} órdenes registradas</small>
+      </article>
+
+      <article class="card kpi destacado">
+        <span class="kpi-label">Producto Candy Bar Más Vendido</span>
+        @if (candyBar().productoMasVendido; as top) {
+          <strong class="kpi-valor">{{ top.nombre }}</strong>
+          <small>{{ top.cantidadVendida }} unidades vendidas (${{ top.recaudacionEstimada | number: '1.0-2' }})</small>
+        } @else {
+          <strong class="kpi-valor">Sin ventas</strong>
+          <small>Aún no hay productos vendidos/retirados</small>
+        }
+      </article>
+
+      <article class="card kpi">
+        <span class="kpi-label">Métodos de Pago</span>
+        @if (facturacion().porMetodoPago.length > 0) {
+          <ul class="lista-metodos">
+            @for (m of facturacion().porMetodoPago; track m.metodo) {
+              <li>
+                <span>{{ m.metodo }} ({{ m.cantidad }})</span>
+                <strong>${{ m.total | number: '1.0-2' }}</strong>
+              </li>
+            }
+          </ul>
+        } @else {
+          <small>Sin desglose disponible</small>
+        }
+      </article>
+    </div>
+
+    <!-- Gráfico de Películas Más Vistas (Semana / Mes) -->
+    <article class="card seccion">
+      <div class="seccion-header">
+        <div>
+          <h3>Películas Más Vistas</h3>
+          <small>Solo entradas retiradas</small>
+        </div>
+
+        <div class="controles-grafico">
+          <div class="segmented">
+            <button
+              type="button"
+              [class.activo]="agrupacion() === 'semana'"
+              (click)="cambiarAgrupacion('semana')"
+            >
+              Por Semana
+            </button>
+            <button
+              type="button"
+              [class.activo]="agrupacion() === 'mes'"
+              (click)="cambiarAgrupacion('mes')"
+            >
+              Por Mes
+            </button>
+          </div>
+
+          <select
+            [ngModel]="periodoSeleccionado()"
+            (ngModelChange)="periodoSeleccionado.set($event)"
+            aria-label="Filtrar período"
+          >
+            <option value="TODOS">Todos los períodos</option>
+            @for (p of periodosDisponibles(); track p.periodo) {
+              <option [value]="p.periodo">{{ p.etiqueta }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      @if (peliculasFiltradas().length === 0) {
+        <p class="vacio">No hay entradas retiradas para mostrar en este filtro.</p>
+      } @else {
+        <div class="grafico-barras">
+          @for (item of peliculasFiltradas(); track item.periodo + item.peliculaId) {
+            <div class="barra-fila">
+              <div class="barra-info">
+                <span class="pelicula-titulo">{{ item.peliculaNombre }}</span>
+                <span class="periodo-tag">{{ item.etiquetaPeriodo }}</span>
+              </div>
+              <div class="barra-track">
+                <div
+                  class="barra-fill"
+                  [style.width.%]="obtenerPorcentajeBarra(item.vistas)"
+                ></div>
+              </div>
+              <span class="barra-cantidad">{{ item.vistas }} vistas</span>
+            </div>
+          }
+        </div>
+      }
+    </article>
+
+    <!-- Ranking Candy Bar -->
+    <article class="card seccion">
+      <h3>Ranking de Productos del Candy Bar</h3>
+      @if (candyBar().ranking.length === 0) {
+        <p class="vacio">No hay ventas de productos del candy bar registradas.</p>
+      } @else {
+        <div class="tabla-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Producto</th>
+                <th>Unidades Vendidas</th>
+                <th>Recaudación Estimada</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (prod of candyBar().ranking; track prod.nombre; let i = $index) {
+                <tr [class.fila-top]="i === 0">
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ prod.nombre }}</td>
+                  <td>{{ prod.cantidadVendida }}</td>
+                  <td>${{ prod.recaudacionEstimada | number: '1.0-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </article>
+
+    <!-- Log de Actividad -->
+    <article class="card seccion">
+      <h3>Log de Actividad (Creación de Funciones, Precios y Validación QR)</h3>
+      @if (logs().length === 0) {
+        <p class="vacio">No hay registros de actividad todavía.</p>
+      } @else {
+        <div class="tabla-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha y Hora</th>
+                <th>Acción</th>
+                <th>Usuario</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (log of logs(); track log.id) {
+                <tr>
+                  <td>{{ log.fecha_hora | date: 'dd/MM/yyyy HH:mm:ss' }}</td>
+                  <td>
+                    <span class="badge" [attr.data-accion]="log.accion">
+                      {{ log.accion }}
+                    </span>
+                  </td>
+                  <td>{{ log.usuario_email || log.usuario_id || 'Admin' }}</td>
+                  <td>{{ log.detalle }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </article>
+  }
+</section>

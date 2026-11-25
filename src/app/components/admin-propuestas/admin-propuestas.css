@@ -1,0 +1,81 @@
+.admin-propuestas {
+  padding: 1rem;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card-propuesta {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.estado {
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #eee;
+}
+
+.estado[data-estado='pendiente'] {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.estado[data-estado='aceptada'] {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.estado[data-estado='rechazada'] {
+  background: #fdecea;
+  color: #b71c1c;
+}
+
+.acciones {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.btn-aceptar {
+  background: #1e7e34;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-rechazar {
+  background: #b71c1c;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.err {
+  color: #b71c1c;
+  background: #fdecea;
+  padding: 0.6rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}

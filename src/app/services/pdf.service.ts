@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { jsPDF } from 'jspdf';
+import { formatearFechaLocal, obtenerHoyLocal } from '../utils/fechas.util';
 
 @Injectable({
   providedIn: 'root',
@@ -11,18 +12,60 @@ export class PdfService {
     return this.FILAS_VIP.has((fila || '').trim().toUpperCase());
   }
 
-  private getPrecioGeneralPesos(funcionData?: any): number {
+  private getPorcentajePreventa(funcionData?: any, porcentajeExplicit?: number): number {
+    if (typeof porcentajeExplicit === 'number' && porcentajeExplicit > 0) {
+      return porcentajeExplicit;
+    }
+
+    const p = funcionData?.peliculas;
+    if (!p?.fecha_estreno) return 0;
+
+    const hoy = obtenerHoyLocal();
+    const estreno = formatearFechaLocal(p.fecha_estreno);
+    if (!estreno || hoy >= estreno || !p.preventa_activa) return 0;
+
+    const diasPreventa = Number(p.dias_preventa ?? 7);
+    const [anio, mes, dia] = estreno.split('-').map(Number);
+    const fechaInicioPreventa = formatearFechaLocal(
+      new Date(anio, mes - 1, dia - diasPreventa)
+    );
+
+    if (hoy >= fechaInicioPreventa && hoy < estreno) {
+      return Number(p.porcentaje_preventa ?? 50);
+    }
+
+    return 0;
+  }
+
+  private getMultiplicadorPreventa(
+    funcionData?: any,
+    enPreventa?: boolean,
+    porcentajeExplicit?: number,
+  ): number {
+    if (enPreventa === false) return 1;
+    const pct = this.getPorcentajePreventa(funcionData, porcentajeExplicit);
+    if (enPreventa === true && pct <= 0) {
+      return 1 + Number(funcionData?.peliculas?.porcentaje_preventa ?? 50) / 100;
+    }
+    return pct > 0 ? 1 + pct / 100 : 1;
+  }
+
+  private getPrecioBaseGeneralPesos(funcionData?: any): number {
     return Number(funcionData?.precio_pesos ?? 0);
   }
 
-  private getPrecioVipPesos(funcionData?: any): number {
-    return this.getPrecioGeneralPesos(funcionData) * 2;
+  private getPrecioGeneralPesos(funcionData?: any, multiplicador = 1): number {
+    return Math.round(this.getPrecioBaseGeneralPesos(funcionData) * multiplicador);
   }
 
-  private getPrecioAsientoPesos(funcionData: any, fila: string): number {
+  private getPrecioVipPesos(funcionData?: any, multiplicador = 1): number {
+    return Math.round(this.getPrecioBaseGeneralPesos(funcionData) * 2 * multiplicador);
+  }
+
+  private getPrecioAsientoPesos(funcionData: any, fila: string, multiplicador = 1): number {
     return this.esFilaVip(fila)
-      ? this.getPrecioVipPesos(funcionData)
-      : this.getPrecioGeneralPesos(funcionData);
+      ? this.getPrecioVipPesos(funcionData, multiplicador)
+      : this.getPrecioGeneralPesos(funcionData, multiplicador);
   }
 
   async generarComprobanteEntrada(datos: {
@@ -33,8 +76,20 @@ export class PdfService {
     metodoPago: string;
     funcionData?: any;
     cupones?: any[];
+    enPreventa?: boolean;
+    porcentajePreventa?: number;
   }): Promise<void> {
     const doc = new jsPDF();
+
+    const pctPreventa = this.getPorcentajePreventa(datos.funcionData, datos.porcentajePreventa);
+    const multiplicador = this.getMultiplicadorPreventa(
+      datos.funcionData,
+      datos.enPreventa,
+      datos.porcentajePreventa,
+    );
+    const tienePreventa = multiplicador > 1;
+    const porcentajeEtiqueta =
+      pctPreventa > 0 ? pctPreventa : Number(datos.funcionData?.peliculas?.porcentaje_preventa ?? 50);
 
     // 🎬 Encabezado del Cine
     doc.setFont('helvetica', 'bold');
@@ -60,10 +115,20 @@ export class PdfService {
     doc.setFontSize(10);
     let posY = 48;
 
+    if (tienePreventa) {
+      doc.setFont('helvetica', 'bold');
+      doc.text(
+        `Modalidad: Preventa anticipada (+${porcentajeEtiqueta}% sobre precio base)`,
+        20,
+        posY,
+      );
+      posY += 7;
+      doc.setFont('helvetica', 'normal');
+    }
+
     const asientos = datos.asientos || [];
     const itemsCandy = datos.itemsCandy || [];
 
-    // Calculamos cupos de entradas incluidos en combos
     const cuposCombo = itemsCandy.reduce((acc: number, item: any) => {
       const cantEntradasPorCombo = Number(
         item?.cantidad_entradas ??
@@ -75,7 +140,6 @@ export class PdfService {
       return acc + cantCombos * cantEntradasPorCombo;
     }, 0);
 
-    // Ordenamos asientos: generales primero, VIP al final (coherente con el checkout)
     const asientosOrdenados = [...asientos].sort((a, b) => {
       const filaA = a.fila || a.row || '';
       const filaB = b.fila || b.row || '';
@@ -87,12 +151,13 @@ export class PdfService {
 
     const diferenciaVip = Math.max(
       0,
-      this.getPrecioVipPesos(datos.funcionData) - this.getPrecioGeneralPesos(datos.funcionData),
+      this.getPrecioVipPesos(datos.funcionData, multiplicador) -
+        this.getPrecioGeneralPesos(datos.funcionData, multiplicador),
     );
 
     let recargoVipComboTotal = 0;
+    let recargoPreventaEntradasSueltas = 0;
 
-    // 🎟️ Listado detallado de asientos
     if (asientosOrdenados.length > 0) {
       doc.setFont('helvetica', 'bold');
       doc.text(`Asientos seleccionados (${asientosOrdenados.length}):`, 20, posY);
@@ -103,11 +168,16 @@ export class PdfService {
         const fila = String(a.fila || a.row || '');
         const numero = a.numero_asiento || a.numero || a.col || '';
         const esVip = this.esFilaVip(fila);
-        const tipoTexto = esVip ? 'VIP (+100%)' : 'General';
-        const cubiertoPorCombo = cuposCombo > 0 && idx < cuposCombo;
-        const precioUnitario = this.getPrecioAsientoPesos(datos.funcionData, fila);
+        const etiquetas: string[] = [esVip ? 'VIP (+100%)' : 'General'];
+        if (tienePreventa) {
+          etiquetas.push(`Preventa +${porcentajeEtiqueta}%`);
+        }
 
-        let lineaAsiento = ` - Fila ${fila} - Asiento ${numero} [${tipoTexto}]`;
+        const cubiertoPorCombo = cuposCombo > 0 && idx < cuposCombo;
+        const precioBaseUnitario = this.getPrecioAsientoPesos(datos.funcionData, fila, 1);
+        const precioUnitario = this.getPrecioAsientoPesos(datos.funcionData, fila, multiplicador);
+
+        let lineaAsiento = ` - Fila ${fila} - Asiento ${numero} [${etiquetas.join(' | ')}]`;
 
         if (cubiertoPorCombo) {
           lineaAsiento += ' : Incluida en combo';
@@ -116,6 +186,9 @@ export class PdfService {
             lineaAsiento += ` (+$${diferenciaVip.toFixed(2)} dif. VIP)`;
           }
         } else if (datos.funcionData) {
+          if (tienePreventa) {
+            recargoPreventaEntradasSueltas += Math.max(0, precioUnitario - precioBaseUnitario);
+          }
           lineaAsiento += ` : $${precioUnitario.toFixed(2)}`;
         }
 
@@ -123,10 +196,20 @@ export class PdfService {
         posY += 6;
       });
 
+      if (tienePreventa && recargoPreventaEntradasSueltas > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.text(
+          ` - Recargo preventa entradas (+${porcentajeEtiqueta}%): +$${recargoPreventaEntradasSueltas.toFixed(2)}`,
+          25,
+          posY,
+        );
+        posY += 6;
+        doc.setFont('helvetica', 'normal');
+      }
+
       posY += 2;
     }
 
-    // 🍿 Listado detallado de productos Candy Bar y Combos
     if (itemsCandy.length > 0) {
       doc.setFont('helvetica', 'bold');
       doc.text('Productos Candy Bar y Combos:', 20, posY);
@@ -167,7 +250,6 @@ export class PdfService {
       posY += 2;
     }
 
-    // 🎟️ Cupones aplicados (si existen)
     if (datos.cupones && datos.cupones.length > 0) {
       doc.setFont('helvetica', 'bold');
       doc.text('Cupones aplicados:', 20, posY);
@@ -195,7 +277,6 @@ export class PdfService {
     doc.text(`Codigo Unico de Retiro: ${datos.codigoUnico}`, 20, posY);
     posY += 12;
 
-    // 📱 Generación e incrustación del Código QR
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${datos.codigoUnico}`;
 
     try {
@@ -210,7 +291,6 @@ export class PdfService {
       console.error('Error al incrustar el codigo QR en el PDF', e);
     }
 
-    // 📥 Descargar el archivo PDF automáticamente
     doc.save(`Comprobante-Cine-${datos.codigoUnico}.pdf`);
   }
 

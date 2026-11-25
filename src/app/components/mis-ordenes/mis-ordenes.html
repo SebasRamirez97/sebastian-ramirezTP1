@@ -30,6 +30,7 @@
               {{ obtenerAsientosOrden(orden).length > 0 ? 'Cine + Candy' : 'Candy Bar' }}
             </span>
             <span *ngIf="estaCancelada(orden)" class="badge-cancelada">Cancelada</span>
+            <span *ngIf="estaAprobada(orden)" class="badge-aprobada">Aprobada</span>
           </div>
 
           <div class="ticket-body">

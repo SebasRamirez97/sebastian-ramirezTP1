@@ -11,8 +11,11 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EntradasService } from '../../services/entradas.services';
 import { FuncionesService } from '../../services/funciones';
+import { PeliculasService } from '../../services/peliculas';
+import { Pelicula } from '../../models/pelicula.model';
 import { supabase } from '../../services/supabaseClient';
 import { ComponenteConAsientosPendientes } from '../../guards/liberar-asientos.guard';
+import { formatearFechaLocal, obtenerHoyLocal } from '../../utils/fechas.util';
 
 @Component({
   selector: 'app-seleccionar-asientos',
@@ -24,29 +27,25 @@ import { ComponenteConAsientosPendientes } from '../../guards/liberar-asientos.g
 export class SeleccionarAsientosComponent
   implements OnInit, OnDestroy, ComponenteConAsientosPendientes
 {
-  // 🔹 Inyección moderna con inject()
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private entradasService = inject(EntradasService);
   private funcionesService = inject(FuncionesService);
+  private peliculasService = inject(PeliculasService);
 
-  // 🔹 Definición de estados con Signals
   funcionId = signal<string>('');
   funcion = signal<any>(null);
+  pelicula = signal<Pelicula | null>(null);
 
   filas = signal<string[]>([
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J-K',
     'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
   ]);
 
-  // 🔹 Definición correcta tipando el Map
   asientosOcupados = signal(new Map<string, any>());
   misAsientosSeleccionados = signal<any[]>([]);
 
-  // IDs de asientos guardados localmente si es anónimo
   private idsAsientosAnonimo: string[] = [];
-
-  // 🛡️ Control para evitar doble clic o llamadas concurrentes en el mismo asiento
   private asientosEnProceso: Set<string> = new Set();
 
   usuarioId = signal<string | null>(null);
@@ -56,21 +55,55 @@ export class SeleccionarAsientosComponent
 
   private realtimeChannel: any;
 
-  // 💰 Precios unitarios calculados (General vs VIP +100%)
+  // 🎟️ Indica si hoy está dentro de la ventana válida de preventa de la película
+  enPreventaActiva = computed<boolean>(() => {
+    const p = this.pelicula() || this.funcion()?.peliculas;
+    if (!p?.fecha_estreno) return false;
+
+    const hoy = obtenerHoyLocal();
+    const estreno = formatearFechaLocal(p.fecha_estreno);
+    if (!estreno || hoy >= estreno) return false;
+
+    if (!p.preventa_activa) return false;
+
+    const diasPreventa = Number(p.dias_preventa ?? 7);
+    const [anio, mes, dia] = estreno.split('-').map(Number);
+    const fechaInicioPreventa = formatearFechaLocal(
+      new Date(anio, mes - 1, dia - diasPreventa)
+    );
+
+    return hoy >= fechaInicioPreventa && hoy < estreno;
+  });
+
+  porcentajePreventa = computed<number>(() => {
+    if (!this.enPreventaActiva()) return 0;
+    const p = this.pelicula() || this.funcion()?.peliculas;
+    return Number(p?.porcentaje_preventa ?? 50);
+  });
+
+  multiplicadorPreventa = computed<number>(() => {
+    return this.enPreventaActiva() ? 1 + this.porcentajePreventa() / 100 : 1;
+  });
+
+  private aplicarRecargo(monto: number): number {
+    return Math.round(monto * this.multiplicadorPreventa());
+  }
+
+  // 💰 Precios unitarios calculados (General vs VIP + recargo preventa si aplica)
   precioGeneralPesos = computed(() =>
-    this.entradasService.calcularPrecioGeneralPesos(this.funcion())
+    this.aplicarRecargo(this.entradasService.calcularPrecioGeneralPesos(this.funcion()))
   );
 
   precioVipPesos = computed(() =>
-    this.entradasService.calcularPrecioVipPesos(this.funcion())
+    this.aplicarRecargo(this.entradasService.calcularPrecioVipPesos(this.funcion()))
   );
 
   precioGeneralPuntos = computed(() =>
-    this.entradasService.calcularPrecioGeneralPuntos(this.funcion())
+    this.aplicarRecargo(this.entradasService.calcularPrecioGeneralPuntos(this.funcion()))
   );
 
   precioVipPuntos = computed(() =>
-    this.entradasService.calcularPrecioVipPuntos(this.funcion())
+    this.aplicarRecargo(this.entradasService.calcularPrecioVipPuntos(this.funcion()))
   );
 
   // 🧮 Subtotales estimados de los asientos seleccionados actualmente
@@ -79,7 +112,10 @@ export class SeleccionarAsientosComponent
     if (!func) return 0;
     return this.misAsientosSeleccionados().reduce(
       (acc, asiento) =>
-        acc + this.entradasService.obtenerPrecioAsiento(func, asiento.fila, 'efectivo'),
+        acc +
+        this.aplicarRecargo(
+          this.entradasService.obtenerPrecioAsiento(func, asiento.fila, 'efectivo')
+        ),
       0
     );
   });
@@ -89,7 +125,10 @@ export class SeleccionarAsientosComponent
     if (!func) return 0;
     return this.misAsientosSeleccionados().reduce(
       (acc, asiento) =>
-        acc + this.entradasService.obtenerPrecioAsiento(func, asiento.fila, 'puntos'),
+        acc +
+        this.aplicarRecargo(
+          this.entradasService.obtenerPrecioAsiento(func, asiento.fila, 'puntos')
+        ),
       0
     );
   });
@@ -101,7 +140,6 @@ export class SeleccionarAsientosComponent
     }
   }
 
-  // 🛡️ Métodos requeridos por el CanDeactivate Guard
   puedeSalir(): boolean {
     return this.misAsientosSeleccionados().length === 0;
   }
@@ -152,13 +190,13 @@ export class SeleccionarAsientosComponent
     }
   }
 
-  // 🌟 Helpers de VIP para plantilla y lógica
   esVip(fila: string): boolean {
     return this.entradasService.esFilaVip(fila);
   }
 
   obtenerPrecioUnitarioAsientoPesos(fila: string): number {
-    return this.entradasService.obtenerPrecioAsiento(this.funcion(), fila, 'efectivo');
+    const base = this.entradasService.obtenerPrecioAsiento(this.funcion(), fila, 'efectivo');
+    return this.aplicarRecargo(base);
   }
 
   obtenerBloquesFila(fila: string): { izquierda: number[]; centro: number[]; derecha: number[] } {
@@ -181,6 +219,12 @@ export class SeleccionarAsientosComponent
     try {
       const data = await this.funcionesService.getFuncionPorId(this.funcionId());
       this.funcion.set(data);
+
+      const peliculaId = data?.pelicula_id || data?.peliculas?.id;
+      if (peliculaId) {
+        const peliData = await this.peliculasService.getPeliculaPorId(peliculaId);
+        this.pelicula.set(peliData);
+      }
     } catch (error: any) {
       this.errorMensaje.set('No se pudo cargar la información de la función.');
     }

@@ -1,15 +1,20 @@
 <div class="cartelera-container">
   <h2>🎬 Próximamente</h2>
 
-  <!-- 🔔 Avisos cuando ya hay entradas disponibles para una película seguida -->
-  <div *ngIf="proximamenteService.avisosDisponibles().length > 0" class="alert alert-success">
-    <div *ngFor="let aviso of proximamenteService.avisosDisponibles()">
+  <!-- 🔔 Avisos cuando una película seguida entra en preventa o ya tiene entradas -->
+<div *ngIf="proximamenteService.avisosDisponibles().length > 0" class="alert alert-success">
+  <div *ngFor="let aviso of proximamenteService.avisosDisponibles()">
+    <ng-container *ngIf="aviso.enPreventa; else avisoNormal">
+      🎟️ ¡<strong>{{ aviso.nombrePelicula }}</strong> entró en <strong>preventa anticipada</strong> (+{{ aviso.porcentajePreventa }}%)!
+    </ng-container>
+    <ng-template #avisoNormal>
       🔔 ¡Las entradas para <strong>{{ aviso.nombrePelicula }}</strong> ya están disponibles!
-      <a [routerLink]="['/peliculas', aviso.peliculaId, 'funciones']" class="ms-2 fw-bold">
-        Ver funciones
-      </a>
-    </div>
+    </ng-template>
+    <a [routerLink]="['/peliculas', aviso.peliculaId, 'funciones']" class="ms-2 fw-bold">
+      Ver funciones
+    </a>
   </div>
+</div>
 
   <!-- 🌟 BUSCADOR Y PULSADORES DE GÉNERO -->
   <div class="buscador-seccion">
@@ -82,10 +87,7 @@
 
           <!-- Badge de Preventa activa si aplica -->
           <div *ngIf="estadoPreventa(pelicula).enPreventa" class="badge bg-warning text-dark mb-2">
-            🎟️ ¡En Preventa! Desde
-            {{ estadoPreventa(pelicula).fechaInicioPreventa | date : 'dd/MM' }} — ${{
-              estadoPreventa(pelicula).precioPesosEfectivo | number : '1.2-2'
-            }}
+            🎟️ ¡En Preventa! 
           </div>
 
           <!-- Botón de alerta de estreno -->

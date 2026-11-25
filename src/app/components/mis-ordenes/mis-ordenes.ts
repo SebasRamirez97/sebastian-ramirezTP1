@@ -120,9 +120,14 @@ export class MisOrdenesComponent implements OnInit {
     return (orden?.estado || '').toLowerCase() === 'cancelada';
   }
 
+  estaAprobada(orden: any): boolean {
+    return (orden?.estado || '').toLowerCase() === 'aprobado';
+  }
+
   // 🔹 Permite cancelar hasta 2 horas antes de la función
+  // 🔹 Permite cancelar solo si NO está cancelada ni aprobada, y hasta 2 horas antes de la función
   puedeCancelarOrden(orden: any): boolean {
-    if (!orden || this.estaCancelada(orden)) {
+    if (!orden || this.estaCancelada(orden) || this.estaAprobada(orden)) {
       return false;
     }
 
@@ -151,9 +156,12 @@ export class MisOrdenesComponent implements OnInit {
   solicitarCancelacion(orden: any): void {
     this.mensajeEstado.set(null);
     if (!this.puedeCancelarOrden(orden)) {
+      const mensaje = this.estaAprobada(orden)
+        ? 'No podés cancelar una orden que ya fue aprobada o retirada.'
+        : 'Solo podés cancelar una compra hasta 2 horas antes del inicio de la función.';
       this.mensajeEstado.set({
         tipo: 'error',
-        texto: 'Solo podés cancelar una compra hasta 2 horas antes del inicio de la función.',
+        texto: mensaje,
       });
       return;
     }

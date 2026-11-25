@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, inject, HostListener } from '@angular/core';
+import { Component, OnInit, signal, computed, inject, HostListener } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -8,6 +8,7 @@ import { supabase } from '../../services/supabaseClient';
 import { PdfService } from '../../services/pdf.service';
 import { AdminCuponesService } from '../../services/admin-cupones.service';
 import { ComponenteConAsientosPendientes } from '../../guards/liberar-asientos.guard';
+import { formatearFechaLocal, obtenerHoyLocal } from '../../utils/fechas.util';
 
 @Component({
   selector: 'app-checkout',
@@ -34,6 +35,8 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
   funcionData = signal<any>({
     precio_pesos: 0,
     precio_puntos: 0,
+    pelicula_id: null,
+    peliculas: null,
   });
 
   metodoPago = signal<string>('efectivo');
@@ -69,6 +72,42 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
   mensajeEdadInsuficiente = signal<string>('');
 
   private idsAsientosAnonimo: string[] = [];
+
+  // 🎟️ Ventana de preventa activa según fecha_estreno, preventa_activa y dias_preventa
+  enPreventaActiva = computed<boolean>(() => {
+    const func = this.funcionData();
+    const peli = Array.isArray(func?.peliculas) ? func.peliculas[0] : func?.peliculas;
+    if (!peli?.fecha_estreno) return false;
+
+    const hoy = obtenerHoyLocal();
+    const estreno = formatearFechaLocal(peli.fecha_estreno);
+    if (!estreno || hoy >= estreno) return false;
+
+    if (!peli.preventa_activa) return false;
+
+    const diasPreventa = Number(peli.dias_preventa ?? 7);
+    const [anio, mes, dia] = estreno.split('-').map(Number);
+    const fechaInicioPreventa = formatearFechaLocal(
+      new Date(anio, mes - 1, dia - diasPreventa),
+    );
+
+    return hoy >= fechaInicioPreventa && hoy < estreno;
+  });
+
+  porcentajePreventa = computed<number>(() => {
+    if (!this.enPreventaActiva()) return 0;
+    const func = this.funcionData();
+    const peli = Array.isArray(func?.peliculas) ? func.peliculas[0] : func?.peliculas;
+    return Number(peli?.porcentaje_preventa ?? 50);
+  });
+
+  multiplicadorPreventa = computed<number>(() => {
+    return this.enPreventaActiva() ? 1 + this.porcentajePreventa() / 100 : 1;
+  });
+
+  private aplicarRecargoPreventa(monto: number): number {
+    return Math.round(Number(monto || 0) * this.multiplicadorPreventa());
+  }
 
   @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any): void {
@@ -108,7 +147,9 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
         (Array.isArray(item?.items) && item.items.length > 0),
     );
     const cantEntradas = Number(
-      item?.cantidad_entradas ?? item?.cantidadEntradas ?? (item?.incluye_entrada || item?.incluyeEntrada ? 1 : 0),
+      item?.cantidad_entradas ??
+        item?.cantidadEntradas ??
+        (item?.incluye_entrada || item?.incluyeEntrada ? 1 : 0),
     );
     const incluyeEntrada = Boolean(
       item?.incluye_entrada || item?.incluyeEntrada || cantEntradas > 0,
@@ -304,12 +345,31 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     if (!fId) return;
     const { data, error } = await supabase
       .from('funciones')
-      .select('precio_pesos, precio_puntos')
+      .select(
+        `
+        precio_pesos,
+        precio_puntos,
+        pelicula_id,
+        peliculas (
+          id,
+          nombre,
+          limite_edad,
+          fecha_estreno,
+          preventa_activa,
+          dias_preventa,
+          porcentaje_preventa
+        )
+      `,
+      )
       .eq('id', fId)
       .single();
 
     if (!error && data) {
-      this.funcionData.set(data);
+      const peliNormalizada = Array.isArray(data.peliculas) ? data.peliculas[0] : data.peliculas;
+      this.funcionData.set({
+        ...data,
+        peliculas: peliNormalizada || null,
+      });
     }
   }
 
@@ -347,18 +407,26 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     return this.entradasService.esFilaVip(fila);
   }
 
-  obtenerPrecioAsientoPesos(fila: string): number {
+  private obtenerPrecioBaseAsientoPesos(fila: string): number {
     return this.entradasService.obtenerPrecioAsiento(this.funcionData(), fila, 'efectivo');
   }
 
-  obtenerPrecioAsientoPuntos(fila: string): number {
+  private obtenerPrecioBaseAsientoPuntos(fila: string): number {
     return this.entradasService.obtenerPrecioAsiento(this.funcionData(), fila, 'puntos');
+  }
+
+  obtenerPrecioAsientoPesos(fila: string): number {
+    return this.aplicarRecargoPreventa(this.obtenerPrecioBaseAsientoPesos(fila));
+  }
+
+  obtenerPrecioAsientoPuntos(fila: string): number {
+    return this.aplicarRecargoPreventa(this.obtenerPrecioBaseAsientoPuntos(fila));
   }
 
   /**
    * Ordena los asientos dejando primero los Generales y al final los VIP.
    * Así, si el usuario tiene 1 General + 1 VIP + 1 Combo con entrada,
-   * el combo cubre la entrada general ($15.000) y la VIP se cobra aparte ($10.000).
+   * el combo cubre la entrada general y la VIP se cobra aparte.
    */
   get asientosOrdenadosParaFacturacion(): any[] {
     const asientos = [...(this.misAsientos() || [])];
@@ -398,7 +466,9 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
 
     return items.reduce((acc, item) => {
       const cantEntradasPorCombo = Number(
-        item?.cantidad_entradas ?? item?.cantidadEntradas ?? (item?.incluye_entrada || item?.incluyeEntrada ? 1 : 0),
+        item?.cantidad_entradas ??
+          item?.cantidadEntradas ??
+          (item?.incluye_entrada || item?.incluyeEntrada ? 1 : 0),
       );
       if (cantEntradasPorCombo <= 0) return acc;
       const cantCombos = Number(item.cantidad || item.cantidadDeseada || 0);
@@ -411,23 +481,25 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
     return Math.max(0, totalAsientos - this.entradasCubiertasPorCombos);
   }
 
-  // Diferencia unitaria entre entrada VIP y General (+100% de la general)
+  // Diferencia unitaria entre entrada VIP y General (+100% de la general), con preventa si aplica
   get diferenciaVipPesos(): number {
     const func = this.funcionData();
-    return Math.max(
+    const baseDiff = Math.max(
       0,
       this.entradasService.calcularPrecioVipPesos(func) -
         this.entradasService.calcularPrecioGeneralPesos(func),
     );
+    return Number(this.aplicarRecargoPreventa(baseDiff).toFixed(2));
   }
 
   get diferenciaVipPuntos(): number {
     const func = this.funcionData();
-    return Math.max(
+    const baseDiff = Math.max(
       0,
       this.entradasService.calcularPrecioVipPuntos(func) -
         this.entradasService.calcularPrecioGeneralPuntos(func),
     );
+    return this.aplicarRecargoPreventa(baseDiff);
   }
 
   // Cantidad de asientos VIP que quedaron cubiertos por combos con entrada
@@ -468,6 +540,31 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
       (acc, asiento) => acc + this.obtenerPrecioAsientoPuntos(asiento?.fila),
       0,
     );
+  }
+
+  // Recargo de preventa visible en entradas sueltas
+  get recargoPreventaEntradasPesos(): number {
+    if (!this.enPreventaActiva()) return 0;
+    const ordenados = this.asientosOrdenadosParaFacturacion;
+    const cubiertas = Math.min(this.entradasCubiertasPorCombos, ordenados.length);
+    const asientosSueltos = ordenados.slice(cubiertas);
+    const totalBase = asientosSueltos.reduce(
+      (acc, asiento) => acc + this.obtenerPrecioBaseAsientoPesos(asiento?.fila),
+      0,
+    );
+    return Number(Math.max(0, this.totalEntradasPesos - totalBase).toFixed(2));
+  }
+
+  get recargoPreventaEntradasPuntos(): number {
+    if (!this.enPreventaActiva()) return 0;
+    const ordenados = this.asientosOrdenadosParaFacturacion;
+    const cubiertas = Math.min(this.entradasCubiertasPorCombos, ordenados.length);
+    const asientosSueltos = ordenados.slice(cubiertas);
+    const totalBase = asientosSueltos.reduce(
+      (acc, asiento) => acc + this.obtenerPrecioBaseAsientoPuntos(asiento?.fila),
+      0,
+    );
+    return Math.max(0, this.totalEntradasPuntos - totalBase);
   }
 
   get totalCandyPesos(): number {
@@ -598,7 +695,7 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
         return true;
       }
 
-      const pelicula = funcion.peliculas as any;
+      const pelicula = Array.isArray(funcion.peliculas) ? funcion.peliculas[0] : (funcion.peliculas as any);
       const limiteEdadPelicula = pelicula?.limite_edad || 'ATP';
       const nombrePeli = pelicula?.nombre || 'la película';
 
@@ -721,6 +818,18 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
           itemsConIdsFisicos,
           totalGeneral,
         );
+
+        await this.pdfService.generarComprobanteEntrada({
+          codigoUnico,
+          asientos: this.misAsientos(),
+          itemsCandy: this.itemsCandySeleccionados(),
+          total: totalGeneral,
+          metodoPago: 'efectivo',
+          funcionData: this.funcionData(),
+          cupones: this.cuponesAplicados(),
+          enPreventa: this.enPreventaActiva(),
+          porcentajePreventa: this.porcentajePreventa(),
+        });
 
         localStorage.removeItem('carritoCandyTemp');
         localStorage.removeItem('asientosSeleccionados');
@@ -879,6 +988,7 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
         await this.adminCuponesService.marcarCuponComoUsado(cupon.userCouponId);
       }
     }
+
     await this.pdfService.generarComprobanteEntrada({
       codigoUnico,
       asientos: this.misAsientos(),
@@ -887,6 +997,8 @@ export class CheckoutComponent implements OnInit, ComponenteConAsientosPendiente
       metodoPago: metodo,
       funcionData: this.funcionData(),
       cupones: this.cuponesAplicados(),
+      enPreventa: this.enPreventaActiva(),
+      porcentajePreventa: this.porcentajePreventa(),
     });
 
     localStorage.removeItem('carritoCandyTemp');

@@ -17,10 +17,13 @@
     "@angular/forms": "^22.1.0",
     "@angular/platform-browser": "^22.1.0",
     "@angular/router": "^22.1.0",
+    "@angular/service-worker": "^22.1.6",
     "@supabase/supabase-js": "^2.116.0",
     "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.9",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@angular/build": "^22.1.5",

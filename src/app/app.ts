@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { SidebarComponent } from './components/sidebar/sidebar.component'; // ðŸ‘ˆ Ajusta la ruta a tu componente
+import { SidebarComponent } from './components/sidebar/sidebar.component';
+import { supabase } from './services/supabaseClient';
+import { ProximamenteService } from './services/proximamente.service';
 
 @Component({
   selector: 'app-root',
@@ -10,9 +12,33 @@ import { SidebarComponent } from './components/sidebar/sidebar.component'; // ðŸ
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
-export class AppComponent {
+export class AppComponent implements OnInit, OnDestroy {
+  private router = inject(Router);
+  private proximamenteService = inject(ProximamenteService);
+  private authSubscription: { unsubscribe: () => void } | null = null;
 
-  constructor(private router: Router) {}
+  async ngOnInit(): Promise<void> {
+    const { data } = await supabase.auth.getUser();
+    if (data?.user?.id) {
+      this.proximamenteService.iniciarMonitoreoGlobal(data.user.id);
+    }
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const userId = session?.user?.id;
+      if (userId) {
+        this.proximamenteService.iniciarMonitoreoGlobal(userId);
+      } else {
+        this.proximamenteService.detenerMonitoreoGlobal();
+      }
+    });
+
+    this.authSubscription = authListener.subscription;
+  }
+
+  ngOnDestroy(): void {
+    this.authSubscription?.unsubscribe();
+    this.proximamenteService.detenerMonitoreoGlobal();
+  }
 
   mostrarSidebar(): boolean {
     const rutaActual = this.router.url;

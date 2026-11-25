@@ -1,0 +1,44 @@
+<section class="admin-propuestas">
+  <h3>📋 Propuestas de Películas de Clientes</h3>
+
+  @if (errorMsg(); as err) {
+    <div class="err">{{ err }}</div>
+  }
+
+  @if (cargando()) {
+    <p>Cargando propuestas...</p>
+  } @else if (propuestas().length === 0) {
+    <p>No hay propuestas registradas todavía.</p>
+  } @else {
+    <div class="lista">
+      @for (p of propuestas(); track p.id) {
+        <article class="card-propuesta">
+          <div class="top">
+            <div>
+              <h4>{{ p.titulo }}</h4>
+              <small>
+                Propuesto por: {{ p.usuario_email || p.usuario_id }} —
+                {{ p.created_at | date: 'dd/MM/yyyy HH:mm' }}
+              </small>
+            </div>
+            <span class="estado" [attr.data-estado]="p.estado">{{ p.estado | uppercase }}</span>
+          </div>
+
+          <p><strong>Descripción:</strong> {{ p.descripcion }}</p>
+          <p><strong>Explicación / Motivo:</strong> {{ p.motivo }}</p>
+
+          @if (p.estado === 'pendiente') {
+            <div class="acciones">
+              <button type="button" class="btn-aceptar" (click)="aceptarYCrearPelicula(p)">
+                Aceptar y crear película
+              </button>
+              <button type="button" class="btn-rechazar" (click)="rechazar(p)">
+                Rechazar
+              </button>
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>

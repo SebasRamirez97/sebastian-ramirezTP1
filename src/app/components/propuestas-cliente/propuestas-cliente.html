@@ -1,0 +1,79 @@
+<section class="propuestas-box">
+  <h3>🎬 Proponer una película para la cartelera</h3>
+  <p class="ayuda">
+    Contanos qué película te gustaría ver en MarkaCine. Podés tener
+    <strong>una propuesta pendiente a la vez</strong>.
+  </p>
+
+  @if (mensaje(); as msg) {
+    <div [class]="msg.tipo === 'ok' ? 'msg-ok' : 'msg-err'">{{ msg.texto }}</div>
+  }
+
+  @if (cargando()) {
+    <p>Cargando...</p>
+  } @else if (propuestaActiva(); as activa) {
+    <div class="tarjeta-activa">
+      <span class="badge pendiente">PENDIENTE DE REVISIÓN</span>
+      <h4>{{ activa.titulo }}</h4>
+      <p><strong>Descripción:</strong> {{ activa.descripcion }}</p>
+      <p><strong>Por qué querés verla:</strong> {{ activa.motivo }}</p>
+      <small>Enviada el {{ activa.created_at | date: 'dd/MM/yyyy HH:mm' }}</small>
+    </div>
+  } @else {
+    <form (ngSubmit)="enviarPropuesta()" class="form-propuesta">
+      <label>
+        Título de la película *
+        <input
+          type="text"
+          name="titulo"
+          [(ngModel)]="titulo"
+          required
+          placeholder="Ej. Dune: Parte Tres"
+        />
+      </label>
+
+      <label>
+        Descripción / Sinopsis *
+        <textarea
+          name="descripcion"
+          rows="3"
+          [(ngModel)]="descripcion"
+          required
+          placeholder="¿De qué trata la película?"
+        ></textarea>
+      </label>
+
+      <label>
+        ¿Por qué querés que esté en el cine? *
+        <textarea
+          name="motivo"
+          rows="2"
+          [(ngModel)]="motivo"
+          required
+          placeholder="Contanos por qué vale la pena verla en pantalla grande..."
+        ></textarea>
+      </label>
+
+      <button type="submit" [disabled]="enviando()">
+        {{ enviando() ? 'Enviando...' : 'Enviar propuesta' }}
+      </button>
+    </form>
+  }
+
+  @if (historial().length > 0) {
+    <div class="historial">
+      <h4>Historial de tus propuestas</h4>
+      <ul>
+        @for (p of historial(); track p.id) {
+          <li>
+            <strong>{{ p.titulo }}</strong> —
+            <span class="estado">{{ p.estado | uppercase }}</span>
+            @if (p.respuesta_admin) {
+              <div class="respuesta">Respuesta: {{ p.respuesta_admin }}</div>
+            }
+          </li>
+        }
+      </ul>
+    </div>
+  }
+</section>

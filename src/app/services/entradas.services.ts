@@ -1,11 +1,14 @@
-import { Injectable } from '@angular/core';
+import { Injectable,inject } from '@angular/core';
 import { supabase } from './supabaseClient'; // Ajusta la ruta a tu cliente de Supabase
+import { LogsService } from './logs.service';
+import { PeliculasService } from './peliculas';
 
 @Injectable({
   providedIn: 'root',
 })
 export class EntradasService {
-  constructor() {}
+  private logsService = inject(LogsService);
+  private peliculasService = inject(PeliculasService);
 
   /**
    * Genera un código aleatorio limpio de 7 letras mayúsculas
@@ -171,7 +174,6 @@ export class EntradasService {
       throw new Error('No se pudo obtener la información de precios de la función.');
     }
 
-    // 👇 Cambio clave: sumamos el precio de cada asiento según su fila (General o VIP)
     let totalCalculado = 0;
 
     for (const asiento of asientosSeleccionados) {
@@ -181,12 +183,11 @@ export class EntradasService {
     const codigoUnico = this.generarCodigoRetiro();
     const idsAsientos = asientosSeleccionados.map((a) => a.id);
 
-    // Creamos la orden principal permitiendo usuario_id nulo si es anónimo
     const { data: orden, error: errorOrden } = await supabase
       .from('ordenes')
       .insert([
         {
-          usuario_id: usuarioId, // Puede ser null para invitados
+          usuario_id: usuarioId,
           codigo_retiro: codigoUnico,
           estado: 'pagado',
           total: totalCalculado,
@@ -217,11 +218,10 @@ export class EntradasService {
     metodoPago: string,
     itemsCandyJson: any[] = [],
     itemsConIdsFisicos: any[] = [],
-    totalGeneral: number = 0, // 👈 Recibimos el total sumado de entradas + candy
+    totalGeneral: number = 0,
   ): Promise<string> {
     const codigoRetiro = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-    // 1. Creamos la orden principal guardando el total correcto en la columna correspondiente
     const { data: ordenCreada, error: errorOrden } = await supabase
       .from('ordenes')
       .insert([
@@ -230,7 +230,7 @@ export class EntradasService {
           codigo_retiro: codigoRetiro,
           metodo_pago: metodoPago,
           estado: 'pagado',
-          total: totalGeneral, // 👈 Aquí se guarda la suma total de dinero
+          total: totalGeneral,
           items_candy: itemsCandyJson.length > 0 ? itemsCandyJson : null,
         },
       ])
@@ -239,7 +239,6 @@ export class EntradasService {
 
     if (errorOrden) throw errorOrden;
 
-    // 2. 🎟️ Actualizamos entradas de cine a 'comprado' para que reflejen el color correcto
     if (asientos && asientos.length > 0) {
       const idsAsientos = asientos.map((a) => a.id);
       const { error: errorAsientos } = await supabase
@@ -250,7 +249,6 @@ export class EntradasService {
       if (errorAsientos) throw errorAsientos;
     }
 
-    // 3. 🍿 Reservamos productos del Candy Bar físicos
     const idsFisicosAreservar: string[] = [];
     itemsConIdsFisicos.forEach((item) => {
       if (item.idsFisicos) {
@@ -273,12 +271,17 @@ export class EntradasService {
     return codigoRetiro;
   }
 
-  async verificarYAprobarOrden(codigoRetiro: string): Promise<any> {
+  async verificarYAprobarOrden(
+    codigoRetiro: string,
+    usuarioActual?: { id?: string | null; email?: string | null },
+  ): Promise<any> {
+    const codigoNormalizado = codigoRetiro.trim().toUpperCase();
+
     // 1. Buscar la orden por su código de retiro
     const { data: orden, error: errorBusqueda } = await supabase
       .from('ordenes')
-      .select('id, estado, total, metodo_pago, items_candy')
-      .eq('codigo_retiro', codigoRetiro.trim().toUpperCase())
+      .select('id, codigo_retiro, estado, total, metodo_pago, items_candy')
+      .eq('codigo_retiro', codigoNormalizado)
       .single();
 
     if (errorBusqueda || !orden) {
@@ -288,6 +291,8 @@ export class EntradasService {
     if (orden.estado === 'aprobado') {
       throw new Error('Esta orden ya fue verificada y aprobada anteriormente.');
     }
+
+    const fechaRetiro = new Date().toISOString();
 
     // 2. Actualizar el estado de la orden principal a 'aprobado'
     const { data: ordenActualizada, error: errorUpdateOrden } = await supabase
@@ -301,42 +306,80 @@ export class EntradasService {
       throw new Error(`Error al aprobar la orden: ${errorUpdateOrden.message}`);
     }
 
-    // 3. Actualizar el estado de las entradas asociadas (si las tiene) a 'retirado'
-    const { error: errorEntradas } = await supabase
+    // 3. Marcar entradas como 'retirado', aprobadas y con fecha exacta de retiro
+    // Solo las entradas con estado 'retirado' cuentan como película vista
+    const { data: entradasActualizadas, error: errorEntradas } = await supabase
       .from('entradas')
-      .update({ estado: 'retirado' })
-      .eq('orden_id', orden.id);
+      .update({
+        estado: 'retirado',
+        aprobada: true,
+        retirado_en: fechaRetiro,
+      })
+      .eq('orden_id', orden.id)
+      .select(`
+        id,
+        funcion_id,
+        funciones (
+          pelicula_id
+        )
+      `);
 
     if (errorEntradas) {
       console.error('Nota: La orden puede no contener entradas de cine.', errorEntradas.message);
+    } else if (entradasActualizadas && entradasActualizadas.length > 0) {
+      // Contamos cuántos asientos (entradas) corresponden a cada película en esta orden aprobada
+      const conteoPorPelicula = new Map<string, number>();
+
+      for (const entrada of entradasActualizadas as any[]) {
+        const funcionRel = Array.isArray(entrada.funciones)
+          ? entrada.funciones[0]
+          : entrada.funciones;
+        const peliculaId = funcionRel?.pelicula_id;
+
+        if (peliculaId) {
+          conteoPorPelicula.set(peliculaId, (conteoPorPelicula.get(peliculaId) || 0) + 1);
+        }
+      }
+
+      for (const [peliculaId, cantidadAsientos] of conteoPorPelicula.entries()) {
+        await this.peliculasService.incrementarCantidadVendida(peliculaId, cantidadAsientos);
+      }
     }
 
-    // 4. 🍿 Actualizar el estado en la tabla 'productos' de 'comprado' a 'retirado'
-    // Opción A: Actualizar directamente todos los productos físicos vinculados a esta orden_id (más seguro y directo)
+    // 4. Actualizar productos físicos vinculados a 'vendido' (si estaban 'reservado' o 'comprado')
     const { error: errorProdOrden } = await supabase
       .from('productos')
-      .update({ estado: 'retirado' })
+      .update({ estado: 'vendido' })
       .eq('orden_id', orden.id)
-      .eq('estado', 'comprado'); // Solo los que estaban comprados
+      .in('estado', ['reservado', 'comprado']);
 
     if (errorProdOrden) {
       console.error('Error al actualizar los productos de la orden:', errorProdOrden.message);
     }
 
-    // Opción B (Respaldada por si usas items_candy en JSON): Recorrer los items por ID por si acaso
+    // Respaldo por IDs en items_candy si existieran
     if (orden.items_candy && Array.isArray(orden.items_candy) && orden.items_candy.length > 0) {
       for (const item of orden.items_candy) {
         const productoId = item.id || item.producto_id;
-
         if (productoId) {
           await supabase
             .from('productos')
-            .update({ estado: 'retirado' })
+            .update({ estado: 'vendido' })
             .eq('id', productoId)
-            .eq('estado', 'comprado');
+            .in('estado', ['reservado', 'comprado']);
         }
       }
     }
+
+    // 5. Registrar en el log de actividad quién validó el QR
+    await this.logsService.registrarLog({
+      accion: 'VALIDAR_QR',
+      entidad: 'orden',
+      entidadId: orden.id,
+      detalle: `Validó orden con código ${orden.codigo_retiro} (Total: $${orden.total}, Método: ${orden.metodo_pago || 'N/A'})`,
+      usuarioId: usuarioActual?.id,
+      usuarioEmail: usuarioActual?.email,
+    });
 
     return ordenActualizada;
   }
@@ -344,7 +387,7 @@ export class EntradasService {
   // 1. Función para extraer la edad mínima numérica del texto del límite
   async obtenerEdadMinima(limiteTexto: string): Promise<number> {
     if (!limiteTexto || limiteTexto.toUpperCase() === 'ATP') {
-      return 0; // ATP es apto para cualquier edad
+      return 0;
     }
     const matches = limiteTexto.match(/\d+/);
     return matches ? parseInt(matches[0], 10) : 0;
@@ -354,11 +397,10 @@ export class EntradasService {
   async calcularEdadUsuario(fechaNacimiento: string): Promise<number> {
     if (!fechaNacimiento) return 0;
 
-    // Desglosamos la fecha YYYY-MM-DD de forma segura evitando problemas de zona horaria UTC
     const partes = fechaNacimiento.split('T')[0].split('-');
     if (partes.length === 3) {
       const anioNac = parseInt(partes[0], 10);
-      const mesNac = parseInt(partes[1], 10) - 1; // Los meses en JS van de 0 a 11
+      const mesNac = parseInt(partes[1], 10) - 1;
       const diaNac = parseInt(partes[2], 10);
 
       const hoy = new Date();
@@ -371,7 +413,6 @@ export class EntradasService {
       return edad;
     }
 
-    // Fallback por seguridad
     const hoy = new Date();
     const nacimiento = new Date(fechaNacimiento);
     let edad = hoy.getFullYear() - nacimiento.getFullYear();

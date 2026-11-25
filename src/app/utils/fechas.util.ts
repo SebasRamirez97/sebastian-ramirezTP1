@@ -16,3 +16,6 @@ export function formatearFechaLocal(fecha: Date | string): string {
 
   return `${anio}-${mes}-${dia}`;
 }
+export function obtenerHoyLocal(): string {
+  return formatearFechaLocal(new Date());
+}
